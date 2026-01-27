@@ -1,93 +1,174 @@
-# Sealien-CtrlPilot-Controller
+# Package Name
 
+## 简介
 
+简要说明这个包的功能和用途。
 
-## Getting started
+## 功能特性
+- 功能1: 描述
+- 功能2: 描述
+- 功能3: 描述
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## 环境要求
+- **ROS2版本**: Humble
+- **操作系统**: Ubuntu 22.04 LTS
+- **编程语言**: C++17, Python 3.10
+- **外部依赖**:
+  - navigation2
+  - moveit2
+  - mavlink
+  - snap7
+  - other...
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## 依赖项
 
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
+### ROS2包依赖
+```xml
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>sealien_rov_msg</depend>
+  <depend>geometry_msgs</depend>
 ```
-cd existing_repo
-git remote add origin https://gitlab.example.com/control/sealien-ctrlpilot-controller.git
-git branch -M main
-git push -uf origin main
+
+### 系统依赖
+```bash
+sudo apt install libopencv-dev libeigen3-dev
 ```
 
-## Integrate with your tools
+### Python依赖(如有)
+```bash
+pip3 install numpy scipy
+```
 
-- [ ] [Set up project integrations](https://gitlab.example.com/control/sealien-ctrlpilot-controller/-/settings/integrations)
+## 安装
 
-## Collaborate with your team
+### 从源码构建
+```bash
+cd ~/ros2_ws/src
+git clone https://github.com/your-org/package_name.git
+cd ~/ros2_ws
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --packages-select package_name
+```
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+## 使用方法
 
-## Test and Deploy
+### 基本启动
+```bash
+source ~/ros2_ws/install/setup.bash
+ros2 launch package_name default.launch.py
+```
 
-Use the built-in continuous integration in GitLab.
+### 启动文件说明
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+#### 1. default.launch.py
+默认配置启动,适用于大多数场景。
 
-***
+**参数:**
+- `param1` (string, default: "value"): 参数说明
+- `param2` (int, default: 10): 参数说明
 
-# Editing this README
+**示例:**
+```bash
+ros2 launch package_name default.launch.py param1:=custom_value
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
 
-## Suggestions for a good README
+#### 2. <packge_name_sim>.launch.py
+仿真环境启动, 使用仿真传感器数据或者虚拟数据文件
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+**示例:**
+```bash
+ros2 launch package_name <packge_name_sim>.launch.py use_rviz:=true
+```
 
-## Name
-Choose a self-explaining name for your project.
+#### 3. <packge_name>.launch.py
+真实硬件启动, 连接物理传感器。
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+**前置条件:**
+- 硬件已正确连接
+- 接口权限已配置
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+**示例:**
+```bash
+ros2 launch package_name <packge_name>.launch.py device:=/dev/ttyUSB0
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+#### 4. <packge_name_test>.launch.py
+功能自测。
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+**前置条件:**
+- 硬件已正确连接
+- 传感器权限已配置
+- ...
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+**示例:**
+```bash
+ros2 launch package_name <packge_name_test>.launch.py
+```
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### 配置文件说明
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+#### default_params.yaml
+```yaml
+node_name:
+  ros__parameters:
+    param1: value1      # 参数1说明
+    param2: 10          # 参数2说明,单位:米
+    param3: true        # 参数3说明
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+## 节点说明
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+### node_main
+主节点, 执行核心功能。
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+**订阅的话题:**
+| 话题名称 | 消息类型 | 描述 |
+|---------|---------|------|
+| `/input_topic` | `sensor_msgs/Sonar` | 声呐数据 |
+| `/camera/image` | `sensor_msgs/Image` | 相机图像 |
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+**发布的话题:**
+| 话题名称 | 消息类型 | 描述 | 频率 |
+|---------|---------|------|------|
+| `/output_topic` | `geometry_msgs/Twist` | 速度指令 | 10Hz |
+| `/status` | `std_msgs/String` | 节点状态 | 1Hz |
 
-## License
-For open source projects, say how it is licensed.
+**提供的服务:**
+| 服务名称 | 服务类型 | 描述 |
+|---------|---------|------|
+| `/reset` | `std_srvs/Trigger` | 重置节点状态 |
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+**使用的动作:**
+| 动作名称 | 动作类型 | 描述 |
+|---------|---------|------|
+| `/navigate_to_pose` | `nav2_msgs/NavigateToPose` | 导航到目标 |
+
+**参数:**
+| 参数名称 | 类型 | 默认值 | 描述 |
+|---------|------|--------|------|
+| `max_speed` | double | 1.0 | 最大速度(m/s) |
+| `update_rate` | int | 10 | 更新频率(Hz) |
+
+## 已知问题
+
+1. **问题1**: 描述
+   - **临时解决方案**: 描述
+   - **跟踪**: 在改了在改了，用的时候你躲远点
+
+## 稳定功能说明（标注好Tag, 便于后续使用）
+
+- [ ] 功能A (Tag: v1.1.0)
+- [ ] 功能B (Tag: v1.2.0)
+- [x] 功能C (Tag: v1.0.0)
+- [ ] 功能A&B&C (Tag: v1.0.0)
+
+## 版本历史
+
+查看 [CHANGELOG.md](CHANGELOG.md)
+
+## 相关资源
+
+- [ROS2文档](https://docs.ros.org)
+- [参考论文](url)
