@@ -353,6 +353,13 @@ void Controller::process_yaw_setpoint(void){
 
   angle_target.z = angle_add + status.yaw_base;  //加上基准值
 
+  //IUM角度范围是0-360，因此目标值要在这个范围内
+  if(angle_target.z >= 360){
+    angle_target.z -= 360; 
+  }else if(angle_target.z < 0){
+    angle_target.z += 360; 
+  }
+
 }
 
 /********************************************************************************
