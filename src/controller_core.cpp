@@ -143,6 +143,8 @@ void Controller::controller_init(){
   status.vel.y = 0;
   status.vel.z = 0;
 
+  status.reset_target_yaw_flag = 0;  //
+
   thru_cmd.thru1  = 1500;  //推进器1500表示转速0，转速范围是1000~2000
   thru_cmd.thru2  = 1500;
   thru_cmd.thru3  = 1500;
@@ -217,7 +219,8 @@ void Controller::attitude_controller_reset(void){
   pid_rate_yaw.reset();
 
   status.yaw_base = status.angle.z;  //重置姿态控制器后，即重新进入姿态控制，yaw_base设定为当前值。
-  angle_target.z  = status.angle.z;  //重置姿态控制器后，即重新进入姿态控制，目标角度设定为当前值。
+  // angle_target.z  = status.angle.z;  //重置姿态控制器后，即重新进入姿态控制，目标角度设定为当前值。
+  status.reset_target_yaw_flag = 1;
 }
 
 /********************************************************************************
@@ -281,7 +284,7 @@ void Controller::position_controller_reset(void){
     pos_target.z = status.sonar_height;
   }
 
-  RCLCPP_INFO(this->get_logger(), "pos_target.z[%f]", pos_target.z);
+  // RCLCPP_INFO(this->get_logger(), "pos_target.z[%f]", pos_target.z);
 }
 
 
@@ -339,13 +342,17 @@ void Controller::setpoint_mapping(void){
  * @return :NONE
  *********************************************************************************/
 void Controller::process_yaw_setpoint(void){
-  // if(status.get_status !=1){  //只有获取状态量后才开始计算
-  //   return;
-  // }
+  static float angle_add = 0.0;
+  if(status.reset_target_yaw_flag){  //重置
+    angle_add = 0;
+    status.reset_target_yaw_flag = 0;   //清除标志量，等待下次触发
+  }
 
-  angle_target.z -= config.yaw_gain * twist_cmd.yaw;
+  angle_add -= config.yaw_gain * twist_cmd.yaw;
+  angle_add = LIMIT(angle_add, -config.yaw_limit, config.yaw_limit);   //角度目标值限幅
 
-  angle_target.z = LIMIT(angle_target.z, (-config.yaw_limit-status.yaw_base), (config.yaw_limit+status.yaw_base));
+  angle_target.z = angle_add + status.yaw_base;  //加上基准值
+
 }
 
 /********************************************************************************

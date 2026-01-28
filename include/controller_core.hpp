@@ -98,6 +98,7 @@ typedef struct{
   float del_alt; //dvl高度
   uint8_t get_status;  //是否获得状态标质量，0:未获得， 1:获得
   float yaw_base; //基准航向，用于航向范围锁定,当切换到定向时，设为当前艏向角
+  uint8_t reset_target_yaw_flag; //m目标航向角重置标志量
 }Status_t;
 
 typedef struct{
