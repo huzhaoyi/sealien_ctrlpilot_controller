@@ -36,7 +36,7 @@ Controller::Controller(std::string node_name):Node(node_name){
   controller_init();
 
   TwistCmd_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>(
-    "/sealien_obc_cmd/twist_cmd", 10, std::bind(&Controller::TwistCmd_callback, this, _1));       //订阅控制指令
+    "/obc/twist_cmd", 10, std::bind(&Controller::TwistCmd_callback, this, _1));       //订阅控制指令
 
   imu_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::ImuNavStatus>(
     "/sealien_mavros/imu", 10, std::bind(&Controller::Imu_callback, this, _1));       //订阅状态数据
@@ -50,7 +50,7 @@ Controller::Controller(std::string node_name):Node(node_name){
 
   target_angle_publisher  = this->create_publisher<geometry_msgs::msg::Point>("~/target_angle", 10);
   target_pos_publisher    = this->create_publisher<geometry_msgs::msg::Point>("~/target_pos", 10);
-  test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
+  // test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
 
 #if PUB_THRUSTER
   thru_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCmd>("~/thruster_cmd", 10); 
@@ -498,9 +498,6 @@ void Controller::control_output(void){
   control_output_publisher->publish(output); 
 #endif
 
-  std_msgs::msg::Float32 test_data;
-  test_data.data = 100*output.yaw;
-  test_publisher->publish(test_data);
 }
 
 /********************************************************************************

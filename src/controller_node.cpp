@@ -13,7 +13,7 @@
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<Controller>("sealien_ctrlpilot_controller"));
+  rclcpp::spin(std::make_shared<Controller>("controller"));
   rclcpp::shutdown();
   return 0;
 }

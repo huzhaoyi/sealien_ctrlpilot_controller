@@ -1,31 +1,35 @@
 # Package Name
-  sealien_rov_controller（属于智能感知与控制项目）
+- sealien_rov_controller（属于智能感知与控制项目）
 ## 简介
-1.进行ROV姿态控制，目前针对小ROV调试完定深和定艘控制。
-  支持控制模式：
-  1）PIOLT_MODE_NONE           = 0,  // Default value
-  2）PIOLT_MODE_MANUAL         = 1,  //手动模式
-  3）PIOLT_MODE_STABILIZE1     = 2,   //稳定模式，定深与定向
-  4）PIOLT_MODE_STABILIZE2     = 3,   //稳定模式，定高与定向
-  5）PIOLT_MODE_AUTODEPTH      = 4,   //定深模式
-  6）PIOLT_MODE_AUTODHIGHT     = 5,   //定高
-  7）PIOLT_MODE_AUTODIRCETION  = 6,
+### 1.进行ROV姿态控制，目前针对小ROV调试完定深和定艘控制。
+- 支持控制模式：
+- 1）PIOLT_MODE_NONE           = 0,  // Default value
+- 2）PIOLT_MODE_MANUAL         = 1,  //手动模式
+- 3）PIOLT_MODE_STABILIZE1     = 2,   //稳定模式，定深与定向
+- 4）PIOLT_MODE_STABILIZE2     = 3,   //稳定模式，定高与定向
+- 5）PIOLT_MODE_AUTODEPTH      = 4,   //定深模式
+- 6）PIOLT_MODE_AUTODHIGHT     = 5,   //定高
+- 7）PIOLT_MODE_AUTODIRCETION  = 6,
 
-2.订阅话题
-    /sealien_obc_cmd/twist_cmd  --> 订阅控制指令。
-    /sealien_mavros/imu --> 订阅状态数据。
-    /sealien_mavros/depthFinder --> 订阅深度数据。
-    /sealien_mavros/heightStatus    --> 订阅高度数据。
+### 2.订阅话题
+- /obc/twist_cmd  --> 订阅控制指令。
+- /sealien_mavros/imu --> 订阅状态数据。
+- /sealien_mavros/depthFinder --> 订阅深度数据。
+- /sealien_mavros/heightStatus    --> 订阅高度数据。
 
-3.发布话题
-	/sealien_rov_controller_node//target_angle  --> 当前目标姿态角。
-    /sealien_rov_controller_node//target_pos    --> 当前目标位置。
-    /sealien_rov_controller_node//thruster_cmd  --> 推进器指令，当PUB_THRUSTER=1时发布该指令，0时不发布。
-    /sealien_rov_controller_node//controller_output --> 控制器输出，当PUB_THRUSTER=0时发布该指令，1时不发布。
+### 3.发布话题
 
-4.启动方式
-	1）ros2 run sealien_rov_controller sealien_rov_controller_node
-	2) ros2 launch sealien_rov_controlle sealien_rov_controller_launch.xml
+- /controller//target_angle  --> 当前目标姿态角。
+
+- /controller//target_pos    --> 当前目标位置。
+
+- /controller//thruster_cmd  --> 推进器指令，当PUB_THRUSTER=1时发布该指令，0时不发布。
+
+- /controller//controller_output --> 控制器输出，当PUB_THRUSTER=0时发布该指令，1时不发布。
+
+### 4.启动方式
+- 1）ros2 run sealien_ctrlpilot_controller controller
+- 2) ros2 launch sealien_ctrlpilot_controller controller_launch.xml
 
 ## 功能特性
 - 功能1: 描述

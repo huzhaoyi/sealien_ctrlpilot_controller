@@ -57,7 +57,7 @@
   <arg name="vel_z_pid_I" default="0" />  <!--z轴速度I-->
   <arg name="vel_z_pid_D" default="0.05" />  <!--z轴速度D-->
 
-  <node pkg="sealien_ctrlpilot_controller" exec="sealien_ctrlpilot_controller_node" name="sealien_ctrlpilot_controller" namespace="" args="--ros-args --log-level info" >
+  <node pkg="sealien_ctrlpilot_controller" exec="controller" name="controller" namespace="" args="--ros-args --log-level info" >
     <param name="angle_roll_integration_limit" value="$(var angle_roll_integration_limit)" />
     <param name="angle_pitch_integration_limit" value="$(var angle_pitch_integration_limit)" />
     <param name="angle_yaw_integration_limit" value="$(var angle_yaw_integration_limit)" />

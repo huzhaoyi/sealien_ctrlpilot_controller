@@ -22,15 +22,15 @@ include_directories(
   )
 
 
-add_executable(sealien_ctrlpilot_controller_node 
+add_executable(controller
               src/controller_node.cpp
               src/controller_core.cpp)
-target_link_libraries(sealien_ctrlpilot_controller_node libyaml-cpp.a)
-ament_target_dependencies(sealien_ctrlpilot_controller_node rclcpp std_msgs geometry_msgs sealien_ctrlpilot_msgmanagement)
+target_link_libraries(controller libyaml-cpp.a)
+ament_target_dependencies(controller rclcpp std_msgs geometry_msgs sealien_ctrlpilot_msgmanagement)
 
 
 install(TARGETS 
-  sealien_ctrlpilot_controller_node
+  controller
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -39,8 +39,8 @@ install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
 )
 
-install(DIRECTORY param/
-  DESTINATION share/${PROJECT_NAME}/param
+install(DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
 )
 
 ament_package()
