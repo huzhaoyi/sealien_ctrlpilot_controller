@@ -118,6 +118,10 @@ void Controller::controller_init(){
   config.yaw_limit = this->get_parameter_or("yaw_limit", DEFUALT_YAW_LIMIT); 
   config.depth_min = this->get_parameter_or("depth_min", DEFUALT_DEPTH_MIN); 
   config.depth_max = this->get_parameter_or("depth_max", DEFUALT_DEPTH_MAN); 
+  config.alt_source = this->get_parameter_or("alt_source", DEFUALT_ALT_SOURCE);
+  config.height_min = this->get_parameter_or("height_min", DEFUALT_ALT_MIN);
+  config.height_max = this->get_parameter_or("height_max", DEFUALT_ALT_MAX);
+  config.ctrl_accuracy = this->get_parameter_or("ctrl_accuracy", DEFUALT_ACCURACY);
 
   twist_cmd.ctrl_mode   = DEFUALT_PIOLT_MODE;  //初始控制模式
   twist_cmd.lock_status = DEFUALT_LOCK_STATUS; //默认上锁
@@ -125,7 +129,7 @@ void Controller::controller_init(){
   status.yaw_base   = DEFUALT_YAW_BASE; //给定一个很大的基准航向，即不限制航向角
   status.sonar_height = 0;
   status.depth = 0;
-  status.del_alt = 0;
+  status.dvl_alt = 0;
 
   status.angle.x = 0;
   status.angle.y = 0;
@@ -187,12 +191,12 @@ void Controller::attitude_controller_init(void){
   float rate_yaw_output_limit   = this->get_parameter_or("rate_yaw_output_limit", PID_RATE_YAW_OUTPUT_LIMIT); 
 
   float angle_yaw_pid_P  = this->get_parameter_or("angle_yaw_pid_P", 0.01f); 
-  float angle_yaw_pid_I = this->get_parameter_or("angle_yaw_pid_I", 0.0f); 
-  float angle_yaw_pid_D   = this->get_parameter_or("angle_yaw_pid_D", 0.025f); 
+  float angle_yaw_pid_I = this->get_parameter_or("angle_yaw_pid_I", 0.01f); 
+  float angle_yaw_pid_D   = this->get_parameter_or("angle_yaw_pid_D", 0.024f); 
 
   float rate_yaw_pid_P  = this->get_parameter_or("rate_yaw_pid_P", 1.0f); 
   float rate_yaw_pid_I = this->get_parameter_or("rate_yaw_pid_I", 0.0f); 
-  float rate_yaw_pid_D   = this->get_parameter_or("rate_yaw_pid_D", 0.1f); 
+  float rate_yaw_pid_D   = this->get_parameter_or("rate_yaw_pid_D", 0.0f); 
 
 
   pid_angle_roll.init(0 , 0, 0, angle_roll_integration_limit, angle_roll_output_limit, config.dt);
@@ -281,7 +285,13 @@ void Controller::position_controller_reset(void){
   if(twist_cmd.ctrl_mode == PIOLT_MODE_STABILIZE1 || twist_cmd.ctrl_mode == PIOLT_MODE_AUTODEPTH){
     pos_target.z = status.depth;
   }else if(twist_cmd.ctrl_mode == PIOLT_MODE_STABILIZE2 || twist_cmd.ctrl_mode == PIOLT_MODE_AUTODHIGHT){
-    pos_target.z = status.sonar_height;
+    if(config.alt_source == HEIGHT_FROM_SONAR){  //高度数据来源于测距声呐
+      pos_target.z = status.sonar_height;
+    }else if(config.alt_source == HEIGHT_FROM_DVL){//高度数据来源于DVL
+      pos_target.z = status.dvl_alt;
+    }else{//高度数据来源于IMU
+      pos_target.z = status.imu_alt;
+    }
   }
 
   // RCLCPP_INFO(this->get_logger(), "pos_target.z[%f]", pos_target.z);
@@ -351,7 +361,13 @@ void Controller::process_yaw_setpoint(void){
   angle_add -= config.yaw_gain * twist_cmd.yaw;
   angle_add = LIMIT(angle_add, -config.yaw_limit, config.yaw_limit);   //角度目标值限幅
 
-  angle_target.z = angle_add + status.yaw_base;  //加上基准值
+  if(status.yaw_base == DEFUALT_YAW_BASE){  //处理切换到自动模式时，目标角度突变问题
+    status.yaw_base = status.angle.z;
+    angle_target.z = angle_add + status.yaw_base;  //加上基准值
+  }else{
+    angle_target.z = angle_add + status.yaw_base;  //加上基准值
+  }
+  
 
   //IUM角度范围是0-360，因此目标值要在这个范围内
   if(angle_target.z >= 360){
@@ -359,6 +375,8 @@ void Controller::process_yaw_setpoint(void){
   }else if(angle_target.z < 0){
     angle_target.z += 360; 
   }
+
+  angle_target.z = LIMIT(angle_target.z, 0, 360);   //角度目标值限幅
 
 }
 
@@ -371,10 +389,14 @@ void Controller::process_z_setpoint(void){
   // if(status.get_status !=1){  //只有获取状态量后才开始计算
   //   return;
   // }
+  if(twist_cmd.ctrl_mode == PIOLT_MODE_STABILIZE1){  //定深
+    pos_target.z -= config.z_gain * twist_cmd.z;
+    pos_target.z = LIMIT(pos_target.z, config.depth_min, config.depth_max);
+  }else{  //定高
+    pos_target.z += config.z_gain * twist_cmd.z;
+    pos_target.z = LIMIT(pos_target.z, config.height_min, config.height_max);
+  }
 
-  pos_target.z -= config.z_gain * twist_cmd.z;
-
-  pos_target.z = LIMIT(pos_target.z, config.depth_min, config.depth_max);
 }
 
 /********************************************************************************
@@ -582,15 +604,16 @@ void Controller::attitude_angle_pid(geometry_msgs::msg::Point* rate_desired, con
   // float roll_error = attitude_desired.x - attitude_actual.x;
   // float pitch_error = attitude_desired.y - attitude_actual.y;
   float yaw_error = attitude_desired.z - attitude_actual.z;
+
+
   if (yaw_error > 180.0f){
     yaw_error -= 360.0f;
   }else if (yaw_error < -180.0){
     yaw_error += 360.0f;
   }
 
-  // RCLCPP_INFO(this->get_logger(), "yaw_error[%f]", yaw_error);
-      
   rate_desired->z = -pid_update(&pid_angle_yaw, yaw_error);
+
 }
 
 /********************************************************************************
@@ -640,7 +663,7 @@ float Controller::pid_update(Pid_Object *pid, const float error){
   pid->outD = pid->kd * pid->deriv; // kd的输出值 kd * deriv
   output = pid->outP + pid->outI + pid->outD; // 总输出
 
-  // 输出限幅，此处设置outputLimit = 0，没有输出限幅，跳过此函数。
+  // 输出限幅，此处如果设置outputLimit = 0，没有输出限幅，跳过此函数。
   if(pid->outputLimit != 0){
     if (output > pid->outputLimit){
       output = pid->outputLimit;
@@ -737,7 +760,14 @@ void Controller::position_controller_update(void){
   if(twist_cmd.ctrl_mode == PIOLT_MODE_STABILIZE1 || twist_cmd.ctrl_mode == PIOLT_MODE_AUTODEPTH){
     status.pos.z = status.depth;
   }else if(twist_cmd.ctrl_mode == PIOLT_MODE_STABILIZE2 || twist_cmd.ctrl_mode == PIOLT_MODE_AUTODHIGHT){
-    status.pos.z = status.sonar_height;
+    if(config.alt_source == HEIGHT_FROM_SONAR){  //高度数据来源于测距声呐
+      status.pos.z = status.sonar_height;
+    }else if(config.alt_source == HEIGHT_FROM_DVL){//高度数据来源于DVL
+      status.pos.z = status.dvl_alt;
+    }else{//高度数据来源于IMU
+      status.pos.z = status.imu_alt;
+    }
+       
   }
 
   position_pos_pid(&vel_desired, pos_desired, status.pos);
@@ -762,6 +792,10 @@ void Controller::position_pos_pid(geometry_msgs::msg::Point* vel_desired, const 
   // float x_error = pos_desired.x - pos_actual.x;
   // float y_error = pos_desired.y - pos_actual.y;
   float z_error = -pos_desired.z + pos_actual.z;
+
+  if(fabs(z_error) < config.ctrl_accuracy){
+    z_error = 0.0;
+  }
   // No position input, no x,y position control enabled
   // vel_desired->x = pid_update(&pid_x, x_error);
   // vel_desired->y = pid_update(&pid_y, z_error);
@@ -829,7 +863,12 @@ void Controller::Imu_callback(const sealien_ctrlpilot_msgmanagement::msg::ImuNav
   //TODO将经纬度转换成相对距离
   // status.pos.x = msg.alt;
   // status.pos.y = msg.alt;
-  status.pos.z = msg.altitude_m;
+  status.imu_alt = msg.altitude_m;
+
+ 
+  status.dvl_alt = msg.dvl_height;
+  status.dvl_alt = LIMIT(status.dvl_alt, config.height_min, config.height_max);
+  
 
   if(status.get_status == 0){
     status.get_status = 1;
@@ -837,7 +876,7 @@ void Controller::Imu_callback(const sealien_ctrlpilot_msgmanagement::msg::ImuNav
 }
 
 void Controller::Depth_callback(const sealien_ctrlpilot_msgmanagement::msg::DepthStatus& msg){
-  status.depth = msg.depth_m[0]; //取第一个深度计数据,深度计方向与坐标系相反，因此取负号
+  status.depth = msg.depth_m[0]; //取第一个深度计数据
 }
 
 void Controller::Height_callback(const sealien_ctrlpilot_msgmanagement::msg::SonarAltimeterStatus& msg){

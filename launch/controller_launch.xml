@@ -32,6 +32,10 @@
   <arg name="vel_x_output_limit" default="1.0" />  <!--x轴速度PID输出限幅-->
   <arg name="vel_y_output_limit" default="1.0" />  <!--y轴速度PID输出限幅-->
   <arg name="vel_z_output_limit" default="1.0" />  <!--z轴速度PID输出限幅-->
+  <arg name="alt_source" default="1" />  <!--高度数据来源，0:测距声呐，1:dvl, 2:imu, -->
+  <arg name="height_min" default="0" />  <!--高度最小值，由高度计决定 -->
+  <arg name="height_max" default="20" />  <!--高度最大值，由高度计决定 -->
+  <arg name="ctrl_accuracy" default="0.02" />  <!--控制精度，单位m -->
 
   <arg name="thruster_base" default="0.0" />  <!--基础油门-->
   <arg name="dt" default="0.05" />  <!--控制周期0.05S(20HZ)，非必要不修改-->
@@ -97,6 +101,7 @@
     <param name="yaw_limit" value="$(var yaw_limit)" />
     <param name="depth_min" value="$(var depth_min)" />
     <param name="depth_max" value="$(var depth_max)" />
+    <param name="ctrl_accuracy" value="$(var ctrl_accuracy)" />
 
     <param name="angle_yaw_pid_P" value="$(var angle_yaw_pid_P)" />
     <param name="angle_yaw_pid_I" value="$(var angle_yaw_pid_I)" />
@@ -114,6 +119,9 @@
     <param name="vel_z_pid_I" value="$(var vel_z_pid_I)" />
     <param name="vel_z_pid_D" value="$(var vel_z_pid_D)" />
 
+    <param name="alt_source" value="$(var alt_source)" />
+    <param name="height_min" value="$(var height_min)" />
+    <param name="height_max" value="$(var height_max)" />
 
     <!-- <remap from="/input/pose" to="/turtlesim1/turtle1/pose" />
     <remap from="/output/cmd_vel" to="/turtlesim2/turtle1/cmd_vel" /> -->

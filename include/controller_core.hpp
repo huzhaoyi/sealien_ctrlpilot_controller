@@ -16,6 +16,7 @@
 #include "sealien_ctrlpilot_msgmanagement/msg/thruster_cmd.hpp"
 #include "std_msgs/msg/float32.hpp"
 
+
 #define PID_ANGLE_ROLL_INTEGRATION_LIMIT  (5.0f)
 #define PID_ANGLE_PITCH_INTEGRATION_LIMIT (5.0f)
 #define PID_ANGLE_YAW_INTEGRATION_LIMIT   (1.0f)
@@ -53,12 +54,16 @@
 #define DEFUALT_PIOLT_MODE  (0)
 #define DEFUALT_LOCK_STATUS (1)
 #define DEFUALT_DT          (0.05f)
-#define DEFUALT_YAW_GAIN    (1.5f)
+#define DEFUALT_YAW_GAIN    (1.0f)
 #define DEFUALT_Z_GAIN      (0.005f)
 #define DEFUALT_YAW_BASE    (30000.0f)
 #define DEFUALT_YAW_LIMIT   (180.0f)
 #define DEFUALT_DEPTH_MIN   (-300.0f)//向上为正
 #define DEFUALT_DEPTH_MAN   (0.0f)  //向上为正
+#define DEFUALT_ALT_SOURCE  (0)  //默认高度来源是测距声呐
+#define DEFUALT_ALT_MIN  (0)  //默认高度最小值
+#define DEFUALT_ALT_MAX  (20)  //默认高度最大值
+#define DEFUALT_ACCURACY (0.02)  //默认控制精度
 
 #define OUTPUT_TYPE   (1)  //输出类型，0:输出控制器的计算值（没有动力分配），1:输出推进器的值（加动力分配）
 
@@ -81,6 +86,13 @@ typedef enum{
   PIOLT_MODE_MISSION        = 9
 } Ctrl_Mode;
 
+typedef enum{
+  HEIGHT_FROM_SONAR   = 0,  // 高度数据来源于测距声呐
+  HEIGHT_FROM_DVL     = 1,  // 高度数据来源于DVL
+  HEIGHT_FROM_IMU     = 2   // 高度数据来源于IMU
+} Alt_Source;
+
+
 typedef struct{
   float x;      //前向指令
   float y;      //侧向指令
@@ -95,7 +107,8 @@ typedef struct{
   geometry_msgs::msg::Point vel;     //速度
   float sonar_height;  //声呐高度
   float depth; //深度计深度
-  float del_alt; //dvl高度
+  float dvl_alt; //dvl高度
+  float imu_alt; //imu高度
   uint8_t get_status;  //是否获得状态标质量，0:未获得， 1:获得
   float yaw_base; //基准航向，用于航向范围锁定,当切换到定向时，设为当前艏向角
   uint8_t reset_target_yaw_flag; //m目标航向角重置标志量
@@ -109,6 +122,10 @@ typedef struct{
   float z_gain; //垂向增益
   float depth_min; //最小深度
   float depth_max; //最大深度
+  uint8_t alt_source; //高度数据来源，0:测距声呐，1:dvl, 2:imu, 
+  float height_min; //最小高度，由高度计决定
+  float height_max; //最大高度，由高度计决定
+  float ctrl_accuracy;  //控制精度
 }Cfg_t;
 
 class Controller : public rclcpp::Node{
