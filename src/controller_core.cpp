@@ -111,16 +111,27 @@ void Controller::Run(){
  *********************************************************************************/
 void Controller::controller_init(){
   // 声明参数，如果不存在则使用默认值
-  config.dt = this->get_parameter_or("dt", DEFUALT_DT); 
-  config.yaw_gain = this->get_parameter_or("yaw_gain", DEFUALT_YAW_GAIN); 
-  config.z_gain = this->get_parameter_or("z_gain", DEFUALT_Z_GAIN); 
-  config.yaw_limit = this->get_parameter_or("yaw_limit", DEFUALT_YAW_LIMIT); 
-  config.depth_min = this->get_parameter_or("depth_min", DEFUALT_DEPTH_MIN); 
-  config.depth_max = this->get_parameter_or("depth_max", DEFUALT_DEPTH_MAN); 
-  config.alt_source = this->get_parameter_or("alt_source", DEFUALT_ALT_SOURCE);
-  config.height_min = this->get_parameter_or("height_min", DEFUALT_ALT_MIN);
-  config.height_max = this->get_parameter_or("height_max", DEFUALT_ALT_MAX);
-  config.ctrl_accuracy = this->get_parameter_or("ctrl_accuracy", DEFUALT_ACCURACY);
+  this->declare_parameter<double>("dt", DEFUALT_DT);
+  this->declare_parameter<double>("yaw_gain", DEFUALT_YAW_GAIN);
+  this->declare_parameter<double>("z_gain", DEFUALT_Z_GAIN);
+  this->declare_parameter<double>("yaw_limit", DEFUALT_YAW_LIMIT);
+  this->declare_parameter<double>("depth_min", DEFUALT_DEPTH_MIN);
+  this->declare_parameter<double>("depth_max", DEFUALT_DEPTH_MAN);
+  this->declare_parameter<int>("alt_source", DEFUALT_ALT_SOURCE);
+  this->declare_parameter<double>("height_min", DEFUALT_ALT_MIN);
+  this->declare_parameter<double>("height_max", DEFUALT_ALT_MAX);
+  this->declare_parameter<double>("ctrl_accuracy", DEFUALT_ACCURACY);
+
+  config.dt = this->get_parameter("dt").as_double();
+  config.yaw_gain = this->get_parameter("yaw_gain").as_double(); 
+  config.z_gain = this->get_parameter("z_gain").as_double(); 
+  config.yaw_limit = this->get_parameter("yaw_limit").as_double(); 
+  config.depth_min = this->get_parameter("depth_min").as_double(); 
+  config.depth_max = this->get_parameter("depth_max").as_double(); 
+  config.alt_source = this->get_parameter("alt_source").as_int();
+  config.height_min = this->get_parameter("height_min").as_double();
+  config.height_max = this->get_parameter("height_max").as_double();
+  config.ctrl_accuracy = this->get_parameter("ctrl_accuracy").as_double();
 
   twist_cmd.ctrl_mode   = DEFUALT_PIOLT_MODE;  //初始控制模式
   twist_cmd.lock_status = DEFUALT_LOCK_STATUS; //默认上锁
@@ -173,29 +184,52 @@ void Controller::controller_init(){
  * @return :NONE
  *********************************************************************************/
 void Controller::attitude_controller_init(void){
-  float angle_roll_integration_limit  = this->get_parameter_or("angle_roll_integration_limit", PID_ANGLE_ROLL_INTEGRATION_LIMIT); 
-  float angle_pitch_integration_limit = this->get_parameter_or("angle_pitch_integration_limit", PID_ANGLE_PITCH_INTEGRATION_LIMIT); 
-  float angle_yaw_integration_limit   = this->get_parameter_or("angle_yaw_integration_limit", PID_ANGLE_YAW_INTEGRATION_LIMIT); 
+  this->declare_parameter<double>("angle_roll_integration_limit", PID_ANGLE_ROLL_INTEGRATION_LIMIT);
+  this->declare_parameter<double>("angle_pitch_integration_limit", PID_ANGLE_PITCH_INTEGRATION_LIMIT);
+  this->declare_parameter<double>("angle_yaw_integration_limit", PID_ANGLE_YAW_INTEGRATION_LIMIT);
 
-  float rate_roll_integration_limit  = this->get_parameter_or("rate_roll_integration_limit", PID_RATE_ROLL_INTEGRATION_LIMIT); 
-  float rate_pitch_integration_limit = this->get_parameter_or("rate_pitch_integration_limit", PID_RATE_PITCH_INTEGRATION_LIMIT); 
-  float rate_yaw_integration_limit   = this->get_parameter_or("rate_yaw_integration_limit", PID_RATE_YAW_INTEGRATION_LIMIT); 
+  this->declare_parameter<double>("rate_roll_integration_limit", PID_RATE_ROLL_INTEGRATION_LIMIT);
+  this->declare_parameter<double>("rate_pitch_integration_limit", PID_RATE_PITCH_INTEGRATION_LIMIT);
+  this->declare_parameter<double>("rate_yaw_integration_limit", PID_RATE_YAW_INTEGRATION_LIMIT);
 
-  float angle_roll_output_limit  = this->get_parameter_or("angle_roll_output_limit", PID_ANGLE_ROLL_OUTPUT_LIMIT); 
-  float angle_pitch_output_limit = this->get_parameter_or("angle_pitch_output_limit", PID_ANGLE_PITCH_OUTPUT_LIMIT); 
-  float angle_yaw_output_limit   = this->get_parameter_or("angle_yaw_output_limit", PID_ANGLE_YAW_OUTPUT_LIMIT); 
+  this->declare_parameter<double>("angle_roll_output_limit", PID_ANGLE_ROLL_OUTPUT_LIMIT);
+  this->declare_parameter<double>("angle_pitch_output_limit", PID_ANGLE_PITCH_OUTPUT_LIMIT);
+  this->declare_parameter<double>("angle_yaw_output_limit", PID_ANGLE_YAW_OUTPUT_LIMIT);
 
-  float rate_roll_output_limit  = this->get_parameter_or("rate_roll_output_limit", PID_RATE_ROLL_OUTPUT_LIMIT); 
-  float rate_pitch_output_limit = this->get_parameter_or("rate_pitch_output_limit", PID_RATE_PITCH_OUTPUT_LIMIT); 
-  float rate_yaw_output_limit   = this->get_parameter_or("rate_yaw_output_limit", PID_RATE_YAW_OUTPUT_LIMIT); 
+  this->declare_parameter<double>("rate_roll_output_limit", PID_RATE_ROLL_OUTPUT_LIMIT);
+  this->declare_parameter<double>("rate_pitch_output_limit", PID_RATE_PITCH_OUTPUT_LIMIT);
+  this->declare_parameter<double>("rate_yaw_output_limit", PID_RATE_YAW_OUTPUT_LIMIT);
 
-  float angle_yaw_pid_P  = this->get_parameter_or("angle_yaw_pid_P", 0.01f); 
-  float angle_yaw_pid_I = this->get_parameter_or("angle_yaw_pid_I", 0.01f); 
-  float angle_yaw_pid_D   = this->get_parameter_or("angle_yaw_pid_D", 0.024f); 
+  this->declare_parameter<double>("angle_yaw_pid_P", 0.01f);
+  this->declare_parameter<double>("angle_yaw_pid_I", 0.01f);
+  this->declare_parameter<double>("angle_yaw_pid_D", 0.024f);
+  this->declare_parameter<double>("rate_yaw_pid_P", 1.0f);
+  this->declare_parameter<double>("rate_yaw_pid_I", 0.0f);
+  this->declare_parameter<double>("rate_yaw_pid_D", 0.0f);  
 
-  float rate_yaw_pid_P  = this->get_parameter_or("rate_yaw_pid_P", 1.0f); 
-  float rate_yaw_pid_I = this->get_parameter_or("rate_yaw_pid_I", 0.0f); 
-  float rate_yaw_pid_D   = this->get_parameter_or("rate_yaw_pid_D", 0.0f); 
+  float angle_roll_integration_limit  = this->get_parameter("angle_roll_integration_limit").as_double(); 
+  float angle_pitch_integration_limit = this->get_parameter("angle_pitch_integration_limit").as_double(); 
+  float angle_yaw_integration_limit   = this->get_parameter("angle_yaw_integration_limit").as_double(); 
+
+  float rate_roll_integration_limit  = this->get_parameter("rate_roll_integration_limit").as_double(); 
+  float rate_pitch_integration_limit = this->get_parameter("rate_pitch_integration_limit").as_double(); 
+  float rate_yaw_integration_limit   = this->get_parameter("rate_yaw_integration_limit").as_double(); 
+
+  float angle_roll_output_limit  = this->get_parameter("angle_roll_output_limit").as_double(); 
+  float angle_pitch_output_limit = this->get_parameter("angle_pitch_output_limit").as_double(); 
+  float angle_yaw_output_limit   = this->get_parameter("angle_yaw_output_limit").as_double(); 
+
+  float rate_roll_output_limit  = this->get_parameter("rate_roll_output_limit").as_double(); 
+  float rate_pitch_output_limit = this->get_parameter("rate_pitch_output_limit").as_double(); 
+  float rate_yaw_output_limit   = this->get_parameter("rate_yaw_output_limit").as_double(); 
+
+  float angle_yaw_pid_P  = this->get_parameter("angle_yaw_pid_P").as_double(); 
+  float angle_yaw_pid_I = this->get_parameter("angle_yaw_pid_I").as_double(); 
+  float angle_yaw_pid_D   = this->get_parameter("angle_yaw_pid_D").as_double(); 
+
+  float rate_yaw_pid_P  = this->get_parameter("rate_yaw_pid_P").as_double(); 
+  float rate_yaw_pid_I = this->get_parameter("rate_yaw_pid_I").as_double(); 
+  float rate_yaw_pid_D   = this->get_parameter("rate_yaw_pid_D").as_double(); 
 
 
   pid_angle_roll.init(0 , 0, 0, angle_roll_integration_limit, angle_roll_output_limit, config.dt);
@@ -232,29 +266,47 @@ void Controller::attitude_controller_reset(void){
  * @return :NONE
  *********************************************************************************/
 void Controller::position_controller_init(void){
-  float pos_x_integration_limit  = this->get_parameter_or("pos_x_integration_limit", PID_POS_X_INTEGRATION_LIMIT); 
-  float pos_y_integration_limit = this->get_parameter_or("pos_y_integration_limit", PID_POS_Y_INTEGRATION_LIMIT); 
-  float pos_z_integration_limit   = this->get_parameter_or("pos_z_integration_limit", PID_POS_Z_INTEGRATION_LIMIT); 
+  this->declare_parameter<double>("pos_x_integration_limit", PID_POS_X_INTEGRATION_LIMIT);
+  this->declare_parameter<double>("pos_y_integration_limit", PID_POS_Y_INTEGRATION_LIMIT);
+  this->declare_parameter<double>("pos_z_integration_limit", PID_POS_Z_INTEGRATION_LIMIT);
+  float pos_x_integration_limit  = this->get_parameter("pos_x_integration_limit").as_double(); 
+  float pos_y_integration_limit = this->get_parameter("pos_y_integration_limit").as_double(); 
+  float pos_z_integration_limit   = this->get_parameter("pos_z_integration_limit").as_double(); 
 
-  float vel_x_integration_limit  = this->get_parameter_or("vel_x_integration_limit", PID_VELOCITY_X_INTEGRATION_LIMIT); 
-  float vel_y_integration_limit = this->get_parameter_or("vel_y_integration_limit", PID_VELOCITY_Y_INTEGRATION_LIMIT); 
-  float vel_z_integration_limit   = this->get_parameter_or("vel_z_integration_limit", PID_VELOCITY_Z_INTEGRATION_LIMIT); 
+  this->declare_parameter<double>("vel_x_integration_limit", PID_VELOCITY_X_INTEGRATION_LIMIT);
+  this->declare_parameter<double>("vel_y_integration_limit", PID_VELOCITY_Y_INTEGRATION_LIMIT);
+  this->declare_parameter<double>("vel_z_integration_limit", PID_VELOCITY_Z_INTEGRATION_LIMIT);
+  float vel_x_integration_limit  = this->get_parameter("vel_x_integration_limit").as_double(); 
+  float vel_y_integration_limit = this->get_parameter("vel_y_integration_limit").as_double(); 
+  float vel_z_integration_limit   = this->get_parameter("vel_z_integration_limit").as_double(); 
 
-  float pos_x_output_limit  = this->get_parameter_or("pos_x_output_limit", PID_POS_X_OUTPUT_LIMIT); 
-  float pos_y_output_limit = this->get_parameter_or("pos_y_output_limit", PID_POS_Y_OUTPUT_LIMIT); 
-  float pos_z_output_limit   = this->get_parameter_or("pos_z_output_limit", PID_POS_Z_OUTPUT_LIMIT); 
+  this->declare_parameter<double>("pos_x_output_limit", PID_POS_X_OUTPUT_LIMIT);
+  this->declare_parameter<double>("pos_y_output_limit", PID_POS_Y_OUTPUT_LIMIT);
+  this->declare_parameter<double>("pos_z_output_limit", PID_POS_Z_OUTPUT_LIMIT);
+  float pos_x_output_limit  = this->get_parameter("pos_x_output_limit").as_double(); 
+  float pos_y_output_limit = this->get_parameter("pos_y_output_limit").as_double(); 
+  float pos_z_output_limit   = this->get_parameter("pos_z_output_limit").as_double(); 
 
-  float vel_x_output_limit  = this->get_parameter_or("vel_x_output_limit", PID_VELOCITY_X_OUTPUT_LIMIT); 
-  float vel_y_output_limit = this->get_parameter_or("vel_y_output_limit", PID_VELOCITY_Y_OUTPUT_LIMIT); 
-  float vel_z_output_limit   = this->get_parameter_or("vel_z_output_limit", PID_VELOCITY_Z_OUTPUT_LIMIT); 
+  this->declare_parameter<double>("vel_x_output_limit", PID_VELOCITY_X_OUTPUT_LIMIT);
+  this->declare_parameter<double>("vel_y_output_limit", PID_VELOCITY_Y_OUTPUT_LIMIT);
+  this->declare_parameter<double>("vel_z_output_limit", PID_VELOCITY_Z_OUTPUT_LIMIT);
+  float vel_x_output_limit  = this->get_parameter("vel_x_output_limit").as_double(); 
+  float vel_y_output_limit = this->get_parameter("vel_y_output_limit").as_double(); 
+  float vel_z_output_limit   = this->get_parameter("vel_z_output_limit").as_double(); 
 
-  float pos_z_pid_P  = this->get_parameter_or("pos_z_pid_P", 1.2f); 
-  float pos_z_pid_I = this->get_parameter_or("pos_z_pid_I", 0.1f); 
-  float pos_z_pid_D   = this->get_parameter_or("pos_z_pid_D", 0.0f); 
+  this->declare_parameter<double>("pos_z_pid_P", 1.2f);
+  this->declare_parameter<double>("pos_z_pid_I", 0.1f);
+  this->declare_parameter<double>("pos_z_pid_D", 0.0f);
+  float pos_z_pid_P  = this->get_parameter("pos_z_pid_P").as_double(); 
+  float pos_z_pid_I = this->get_parameter("pos_z_pid_I").as_double(); 
+  float pos_z_pid_D   = this->get_parameter("pos_z_pid_D").as_double(); 
 
-  float vel_z_pid_P  = this->get_parameter_or("vel_z_pid_P", 1.0f); 
-  float vel_z_pid_I = this->get_parameter_or("vel_z_pid_I", 0.0f); 
-  float vel_z_pid_D   = this->get_parameter_or("vel_z_pid_D", 0.05f); 
+  this->declare_parameter<double>("vel_z_pid_P",  1.0f);
+  this->declare_parameter<double>("vel_z_pid_I", 0.0f);
+  this->declare_parameter<double>("vel_z_pid_D", 0.05f);
+  float vel_z_pid_P  = this->get_parameter("vel_z_pid_P").as_double(); 
+  float vel_z_pid_I = this->get_parameter("vel_z_pid_I").as_double(); 
+  float vel_z_pid_D   = this->get_parameter("vel_z_pid_D").as_double(); 
 
 
   pid_x.init(0 , 0, 0, pos_x_integration_limit, pos_x_output_limit, config.dt);

@@ -58,14 +58,12 @@
 #define DEFUALT_Z_GAIN      (0.005f)
 #define DEFUALT_YAW_BASE    (30000.0f)
 #define DEFUALT_YAW_LIMIT   (180.0f)
-#define DEFUALT_DEPTH_MIN   (-300.0f)//向上为正
+#define DEFUALT_DEPTH_MIN   (-100.0f)//向上为正
 #define DEFUALT_DEPTH_MAN   (0.0f)  //向上为正
 #define DEFUALT_ALT_SOURCE  (0)  //默认高度来源是测距声呐
 #define DEFUALT_ALT_MIN  (0)  //默认高度最小值
 #define DEFUALT_ALT_MAX  (20)  //默认高度最大值
 #define DEFUALT_ACCURACY (0.02)  //默认控制精度
-
-#define OUTPUT_TYPE   (1)  //输出类型，0:输出控制器的计算值（没有动力分配），1:输出推进器的值（加动力分配）
 
 #define LIMIT(x, min, max)   (x<min? min:(x>max? max:x))
 //exp函数系数

@@ -1,17 +1,3 @@
-# Copyright 2018 Open Source Robotics Foundation, Inc.
-# Copyright 2019 Samsung Research America
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from launch import LaunchDescription
 from ament_index_python.packages import get_package_share_directory
@@ -38,3 +24,38 @@ def generate_launch_description():
             ]
            ),
 ])
+
+
+# import launch
+# from launch import LaunchDescription
+# from launch.actions import DeclareLaunchArgument, LogInfo
+# from launch.substitutions import LaunchConfiguration
+# from launch_ros.actions import Node
+# import os
+# from ament_index_python.packages import get_package_share_directory
+
+# def generate_launch_description():
+#      # 拼接文件路径
+#     config_file_path = os.path.join(get_package_share_directory('sealien_ctrlpilot_controller'), 'config', 'default.yaml')
+
+#     print(f"Current config_file_path: {config_file_path}")  # 打印当前目录
+    
+#     # 声明参数文件路径的启动参数
+#     return LaunchDescription([
+        
+#         # 启动节点并加载参数文件
+#         Node(
+#             package='sealien_ctrlpilot_controller',  # 你的包名
+#             executable='controller',  # 你的可执行文件名
+#             name='controller',  # 节点名称
+#             output='screen',
+#             parameters=[config_file_path],  # 加载指定的 YAML 配置文件
+#         ),
+        
+#         # 打印日志确认节点启动
+#         LogInfo(
+#             condition=launch.conditions.LaunchConfigurationEquals('config_file', ''),
+#             msg="Starting with default parameter file"
+#         )
+#     ])
+

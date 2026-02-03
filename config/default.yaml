@@ -1,60 +1,49 @@
 ### controller config file ###
-controller_node:
-    ros__parameters:
-# The frequency, in Hz, at which the filter will output a position estimate. Note that the filter will not begin
-      angle_roll_integration_limit: 1.0  #滚转角度积分限幅
-      angle_pitch_integration_limit: 1.0 #俯仰角度积分限幅
-      angle_yaw_integration_limit: 1.0 #艏向角度积分限幅
-      rate_roll_integration_limit: 1.0 #滚转角速率度积分限幅
-      rate_yaw_integration_limit: 1.0 #艏向角速率积分限幅
-
-      angle_roll_output_limit: 1.0 #滚转角度PID输出限幅
-      angle_pitch_output_limit: 1.0 #滚转角度PID输出限幅
-      angle_yaw_output_limit: 1.0 #艏向角度PID输出限幅
-
-      rate_roll_output_limit: 1.0 #滚转角速度PID输出限幅
-      rate_pitch_output_limit: 1.0 #俯仰角速度PID输出限幅
-      rate_yaw_output_limit: 1.0 #艏向角速度PID输出限幅
-
-      pos_x_integration_limit: 1.0 #x轴位置积分限幅
-      pos_y_integration_limit: 1.0 #y轴位置积分限幅
-      pos_z_integration_limit: 1.0 #z轴位置积分限幅
-
-      vel_x_integration_limit: 1.0 #x轴速度积分限幅
-      vel_y_integration_limit: 1.0 #y轴速度积分限幅
-      vel_z_integration_limit: 1.0 #z轴速度积分限幅
-
-      pos_x_output_limit: 1.0 #x轴位置PID输出限幅
-      pos_y_output_limit: 1.0 #y轴位置PID输出限幅
-      pos_z_output_limit: 1.0 #z轴位置PID输出限幅
-
-      vel_x_output_limit: 1.0 #x轴速度PID输出限幅
-      vel_y_output_limit: 1.0 #y轴速度PID输出限幅
-      vel_z_output_limit: 1.0 #z轴速度PID输出限幅
-      alt_source: 0 #高度数据来源，0:测距声呐，1:dvl, 2:im
-      height_min: 0 #高度最小值，由高度计决定
-      height_max: 20 #高度最大值，由高度计决定
-      ctrl_accuracy: 0.02 #控制精度，单位m
-      dt: 0.05 #控制周期0.05S(20HZ)，非必要不修改
-      yaw_gain: 1.0 #航向遥控器增益
-      z_gain: 0.005 #垂向遥控器增益
-      yaw_limit: 180 #定向模式时，角度限幅，正范围是正负，单位是（°）
-      depth_min: -300 #深度最小值，向下为负
-      depth_max: 0 #深度最大值，向下为负
-
-      angle_yaw_pid_P: 0.01 #航向角P
-      angle_yaw_pid_I: 0.01 #航向角P
-      angle_yaw_pid_D: 0.024 #航向角D
-
-      rate_yaw_pid_P: 1.0 #航向角速度P
-      rate_yaw_pid_I: 0 #航向角速度I
-      rate_yaw_pid_D: 0 #航向角速度D
-
-      pos_z_pid_P: 1.2 #z轴位置P
-      pos_z_pid_I: 0.1 #z轴位置I
-      pos_z_pid_D: 0.0 #z轴位置D
-
-      vel_z_pid_P: 1.0 #z轴速度P
-      vel_z_pid_I: 0 #z轴速度I
-      vel_z_pid_D: 0 #z轴速度D
+controller:
+  ros__parameters:
+    angle_roll_integration_limit: 1.0  #滚转角度积分限幅
+    angle_pitch_integration_limit: 1.0 #俯仰角度积分限幅
+    angle_yaw_integration_limit: 1.0 #艏向角度积分限幅
+    rate_roll_integration_limit: 1.0 #滚转角速率度积分限幅
+    rate_yaw_integration_limit: 1.0 #艏向角速率积分限幅     
+    angle_roll_output_limit: 1.0 #滚转角度PID输出限幅
+    angle_pitch_output_limit: 1.0 #滚转角度PID输出限幅
+    angle_yaw_output_limit: 1.0 #艏向角度PID输出限幅        
+    rate_roll_output_limit: 1.0 #滚转角速度PID输出限幅
+    rate_pitch_output_limit: 1.0 #俯仰角速度PID输出限幅
+    rate_yaw_output_limit: 1.0 #艏向角速度PID输出限幅       
+    pos_x_integration_limit: 1.0 #x轴位置积分限幅
+    pos_y_integration_limit: 1.0 #y轴位置积分限幅
+    pos_z_integration_limit: 1.0 #z轴位置积分限幅       
+    vel_x_integration_limit: 1.0 #x轴速度积分限幅
+    vel_y_integration_limit: 1.0 #y轴速度积分限幅
+    vel_z_integration_limit: 1.0 #z轴速度积分限幅       
+    pos_x_output_limit: 1.0 #x轴位置PID输出限幅
+    pos_y_output_limit: 1.0 #y轴位置PID输出限幅
+    pos_z_output_limit: 1.0 #z轴位置PID输出限幅     
+    vel_x_output_limit: 1.0 #x轴速度PID输出限幅
+    vel_y_output_limit: 1.0 #y轴速度PID输出限幅
+    vel_z_output_limit: 1.0 #z轴速度PID输出限幅
+    alt_source: 0 #高度数据来源，0:测距声呐，1:dvl, 2:im
+    height_min: 0.0 #高度最小值，由高度计决定
+    height_max: 20.0 #高度最大值，由高度计决定
+    ctrl_accuracy: 0.02 #控制精度，单位m
+    dt: 0.05 #控制周期0.05S(20HZ)，非必要不修改
+    yaw_gain: 1.0 #航向遥控器增益
+    z_gain: 0.005 #垂向遥控器增益
+    yaw_limit: 180.0 #定向模式时，角度限幅，正范围是正负，单位是（°）
+    depth_min: -300.0 #深度最小值，向下为负
+    depth_max: 0.0 #深度最大值，向下为    
+    angle_yaw_pid_P: 0.01 #航向角P
+    angle_yaw_pid_I: 0.01 #航向角P
+    angle_yaw_pid_D: 0.024 #航向角        
+    rate_yaw_pid_P: 1.0 #航向角速度P
+    rate_yaw_pid_I: 0.0 #航向角速度I
+    rate_yaw_pid_D: 0.0 #航向角速度        
+    pos_z_pid_P: 1.2 #z轴位置P
+    pos_z_pid_I: 0.1 #z轴位置I
+    pos_z_pid_D: 0.0 #z轴位置        
+    vel_z_pid_P: 1.0 #z轴速度P
+    vel_z_pid_I: 0.0 #z轴速度I
+    vel_z_pid_D: 0.05 #z轴速度D
 
