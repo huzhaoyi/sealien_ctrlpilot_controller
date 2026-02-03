@@ -32,7 +32,7 @@
   <arg name="vel_x_output_limit" default="1.0" />  <!--x轴速度PID输出限幅-->
   <arg name="vel_y_output_limit" default="1.0" />  <!--y轴速度PID输出限幅-->
   <arg name="vel_z_output_limit" default="1.0" />  <!--z轴速度PID输出限幅-->
-  <arg name="alt_source" default="1" />  <!--高度数据来源，0:测距声呐，1:dvl, 2:imu, -->
+  <arg name="alt_source" default="0" />  <!--高度数据来源，0:测距声呐，1:dvl, 2:imu, -->
   <arg name="height_min" default="0" />  <!--高度最小值，由高度计决定 -->
   <arg name="height_max" default="20" />  <!--高度最大值，由高度计决定 -->
   <arg name="ctrl_accuracy" default="0.02" />  <!--控制精度，单位m -->
@@ -123,8 +123,9 @@
     <param name="height_min" value="$(var height_min)" />
     <param name="height_max" value="$(var height_max)" />
 
-    <!-- <remap from="/input/pose" to="/turtlesim1/turtle1/pose" />
-    <remap from="/output/cmd_vel" to="/turtlesim2/turtle1/cmd_vel" /> -->
+    <remap from="/sealien_mavros/imu" to="/ImuNavStatus" />
+    <remap from="/sealien_mavros/depthFinder" to="/DepthStatus" />
+    <remap from="/sealien_mavros/heightStatus" to="/SonarAltimeterStatus" />
   </node>
 </launch>
 

@@ -11,7 +11,7 @@
 #include "controller_core.hpp"
 
 // #define PRINT_PARAMS     1    //0： 开始时不打印参数，1:开始时打印参数
-#define PUB_THRUSTER     1    //0： 发布twist_cmd，1:发布thruster_cmd
+#define PUB_THRUSTER     0    //0： 发布twist_cmd，1:发布thruster_cmd
 
 
 //动力分配矩阵，顺序 x,y,z,roll,pitch,yaw
@@ -111,7 +111,6 @@ void Controller::Run(){
  *********************************************************************************/
 void Controller::controller_init(){
   // 声明参数，如果不存在则使用默认值
-  config.thrust_base = this->get_parameter_or("thruster_base", DEFUALT_THRUST_BASE);
   config.dt = this->get_parameter_or("dt", DEFUALT_DT); 
   config.yaw_gain = this->get_parameter_or("yaw_gain", DEFUALT_YAW_GAIN); 
   config.z_gain = this->get_parameter_or("z_gain", DEFUALT_Z_GAIN); 
