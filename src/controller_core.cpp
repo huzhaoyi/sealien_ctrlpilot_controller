@@ -10,7 +10,7 @@
 
 #include "controller_core.hpp"
 
-// #define PRINT_PARAMS     1    //0： 开始时不打印参数，1:开始时打印参数
+#define PRINT_PARAMS     1    //0： 开始时不打印参数，1:开始时打印参数
 #define PUB_THRUSTER     0    //0： 发布twist_cmd，1:发布thruster_cmd
 
 
@@ -133,6 +133,21 @@ void Controller::controller_init(){
   config.height_max = this->get_parameter("height_max").as_double();
   config.ctrl_accuracy = this->get_parameter("ctrl_accuracy").as_double();
 
+#if PRINT_PARAMS
+  RCLCPP_INFO(this->get_logger(), "dt[%f]", config.dt);
+  RCLCPP_INFO(this->get_logger(), "yaw_gain[%f]", config.yaw_gain);
+  RCLCPP_INFO(this->get_logger(), "z_gain[%f]", config.z_gain);
+  RCLCPP_INFO(this->get_logger(), "yaw_limit[%f]", config.yaw_limit);
+  RCLCPP_INFO(this->get_logger(), "depth_min[%f]", config.depth_min);
+  RCLCPP_INFO(this->get_logger(), "depth_max[%f]", config.depth_max);
+  RCLCPP_INFO(this->get_logger(), "alt_source[%d]", config.alt_source);
+  RCLCPP_INFO(this->get_logger(), "height_min[%f]", config.height_min);
+  RCLCPP_INFO(this->get_logger(), "height_max[%f]", config.height_max);
+  RCLCPP_INFO(this->get_logger(), "ctrl_accuracy[%f]", config.ctrl_accuracy);
+#endif
+
+
+
   twist_cmd.ctrl_mode   = DEFUALT_PIOLT_MODE;  //初始控制模式
   twist_cmd.lock_status = DEFUALT_LOCK_STATUS; //默认上锁
   status.get_status = 0; //未获得状态量
@@ -230,6 +245,32 @@ void Controller::attitude_controller_init(void){
   float rate_yaw_pid_P  = this->get_parameter("rate_yaw_pid_P").as_double(); 
   float rate_yaw_pid_I = this->get_parameter("rate_yaw_pid_I").as_double(); 
   float rate_yaw_pid_D   = this->get_parameter("rate_yaw_pid_D").as_double(); 
+
+#if PRINT_PARAMS
+  RCLCPP_INFO(this->get_logger(), "angle_roll_integration_limit[%f]", angle_roll_integration_limit);
+  RCLCPP_INFO(this->get_logger(), "angle_pitch_integration_limit[%f]", angle_pitch_integration_limit);
+  RCLCPP_INFO(this->get_logger(), "angle_yaw_integration_limit[%f]", angle_yaw_integration_limit);
+
+  RCLCPP_INFO(this->get_logger(), "rate_roll_integration_limit[%f]", rate_roll_integration_limit);
+  RCLCPP_INFO(this->get_logger(), "rate_pitch_integration_limit[%f]", rate_pitch_integration_limit);
+  RCLCPP_INFO(this->get_logger(), "rate_yaw_integration_limit[%f]", rate_yaw_integration_limit);
+
+  RCLCPP_INFO(this->get_logger(), "angle_roll_output_limit[%d]", angle_roll_output_limit);
+  RCLCPP_INFO(this->get_logger(), "angle_pitch_output_limit[%f]", angle_pitch_output_limit);
+  RCLCPP_INFO(this->get_logger(), "angle_yaw_output_limit[%f]", angle_yaw_output_limit);
+
+  RCLCPP_INFO(this->get_logger(), "rate_roll_output_limit[%f]", rate_roll_output_limit);
+  RCLCPP_INFO(this->get_logger(), "rate_pitch_output_limit[%f]", rate_pitch_output_limit);
+  RCLCPP_INFO(this->get_logger(), "rate_yaw_output_limit[%f]", rate_yaw_output_limit);
+
+  RCLCPP_INFO(this->get_logger(), "angle_yaw_pid_P[%f]", angle_yaw_pid_P);
+  RCLCPP_INFO(this->get_logger(), "angle_yaw_pid_I[%f]", angle_yaw_pid_I);
+  RCLCPP_INFO(this->get_logger(), "angle_yaw_pid_D[%f]", angle_yaw_pid_D);
+
+  RCLCPP_INFO(this->get_logger(), "rate_yaw_pid_P[%f]", rate_yaw_pid_P);
+  RCLCPP_INFO(this->get_logger(), "rate_yaw_pid_I[%f]", rate_yaw_pid_I);
+  RCLCPP_INFO(this->get_logger(), "rate_yaw_pid_D[%f]", rate_yaw_pid_D);
+#endif
 
 
   pid_angle_roll.init(0 , 0, 0, angle_roll_integration_limit, angle_roll_output_limit, config.dt);
