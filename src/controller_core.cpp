@@ -673,13 +673,15 @@ void Controller::attitude_controller_update(void){
   geometry_msgs::msg::Point rate_desired;
 
   // attitude_desired.x = angle_target.x;
-  // attitude_desired.y = angle_target.y;
+  attitude_desired.y = 0;   //pitch目标值是0
   attitude_desired.z = angle_target.z;
 
   attitude_angle_pid(&rate_desired, attitude_desired, status.angle);
   // controller_output.yaw = rate_desired.z;
   
   attitude_rate_pid(&rate_output, rate_desired, status.rate);
+
+  controller_output.y = rate_output.y;
   controller_output.yaw = rate_output.z;
 }
 
@@ -694,7 +696,7 @@ void Controller::attitude_angle_pid(geometry_msgs::msg::Point* rate_desired, con
   const geometry_msgs::msg::Point attitude_actual){
 
   // float roll_error = attitude_desired.x - attitude_actual.x;
-  // float pitch_error = attitude_desired.y - attitude_actual.y;
+  float pitch_error = attitude_desired.y - attitude_actual.y;
   float yaw_error = attitude_desired.z - attitude_actual.z;
 
 
@@ -705,6 +707,8 @@ void Controller::attitude_angle_pid(geometry_msgs::msg::Point* rate_desired, con
   }
 
   rate_desired->z = -pid_update(&pid_angle_yaw, yaw_error);
+
+  rate_desired->y = pid_update(&pid_angle_pitch, pitch_error);
 
 }
 
@@ -719,15 +723,13 @@ void Controller::attitude_rate_pid(geometry_msgs::msg::Point* rate_output, const
   const geometry_msgs::msg::Point gyro_actual){
 
   // float roll_rate_error = rate_desired.x - gyro_actual.x;
-  // float pitch_rate_error = rate_desired.y - gyro_actual.y;
+  float pitch_rate_error = rate_desired.y - gyro_actual.y;
   float yaw_rate_error = rate_desired.z - gyro_actual.z;
+
   // rate_output->x = pid_update(&pid_rate_roll, roll_rate_error);
-  // rate_output->y = pid_update(&pid_rate_pitch, pitch_rate_error);
+  rate_output->y = pid_update(&pid_rate_pitch, pitch_rate_error);
   rate_output->z = rate_pid_update(&pid_rate_yaw, yaw_rate_error);
-  // rate_output->z = pid_update(&pid_rate_yaw, yaw_rate_error);
-  // rate_output->roll = normalize_float(rate_output->x, -10, 10, -1, 1);
-  // rate_output->pitch = normalize_float(rate_output->y, -10, 10, -1, 1);
-  rate_output->z = normalize_float(rate_output->z, -PID_RATE_YAW_OUTPUT_LIMIT, PID_RATE_YAW_OUTPUT_LIMIT, -1, 1);
+
 }
 
 
