@@ -11,9 +11,14 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sealien_ctrlpilot_msgmanagement REQUIRED)
-# find_package(tf2 REQUIRED)
-# find_package(tf2_msgs REQUIRED)
-# find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+
+# Geographiclib installs FindGeographicLib.cmake to this non-standard location
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/usr/share/cmake/geographiclib/")
+find_package(GeographicLib REQUIRED)
 
 include_directories(
   include  
@@ -24,9 +29,19 @@ include_directories(
 
 add_executable(controller
               src/controller_node.cpp
-              src/controller_core.cpp)
+              src/controller_core.cpp
+              src/ctr_mode.cpp)
 target_link_libraries(controller libyaml-cpp.a)
-ament_target_dependencies(controller rclcpp std_msgs geometry_msgs sealien_ctrlpilot_msgmanagement)
+ament_target_dependencies(controller 
+  rclcpp 
+  std_msgs 
+  geometry_msgs 
+  sealien_ctrlpilot_msgmanagement
+  tf2_geometry_msgs
+  tf2_msgs
+  tf2
+  GeographicLib
+  nav_msgs)
 
 
 install(TARGETS 

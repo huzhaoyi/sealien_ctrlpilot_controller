@@ -31,15 +31,53 @@ controller:
     dt: 0.05 #控制周期0.05S(20HZ)，非必要不修改
     yaw_gain: 1.0 #航向遥控器增益
     z_gain: 0.005 #垂向遥控器增益
+    xy_gain: 0.005 #垂向遥控器增益
     yaw_limit: 180.0 #定向模式时，角度限幅，正范围是正负，单位是（°）
     depth_min: -300.0 #深度最小值，向下为负
-    depth_max: 0.0 #深度最大值，向下为    
+    depth_max: 0.0 #深度最大值，向下为 
+    x_min: -10000.0 #x方向最小值
+    x_max: 10000.0 #x方向最大值
+    y_min: -10000.0 #y方向最小值
+    y_max: 10000.0 #y方向最大值
+    use_rollpitch_ctrl: false #是否使用俯仰滚转角控制，0:不使用，1:使用
+    use_imu2navi: false #是否使用IMU位置信息导航，0:不使用（使用定位模块的位置信息），1:使用
+    track_alt_depth: 0  #路径跟踪完成后，进入位置保持模式，是定高还是定深，0:定深，1:定高
+
+    angle_roll_pid_P: 0.01 #roll P
+    angle_roll_pid_I: 0.01 #roll I
+    angle_roll_pid_D: 0.0 #roll D        
+    rate_roll_pid_P: 1.0 #roll rate P
+    rate_roll_pid_I: 0.0 #roll rate I
+    rate_roll_pid_D: 0.0 #roll rate D    
+
+    angle_pitch_pid_P: 0.01 #pitch P
+    angle_pitch_pid_I: 0.01 #pitch I
+    angle_pitch_pid_D: 0.0 #pitch D        
+    rate_pitch_pid_P: 1.0 #pitch rate P
+    rate_pitch_pid_I: 0.0 #pitch rate I
+    rate_pitch_pid_D: 0.0 #pitch rate D  
+
     angle_yaw_pid_P: 0.01 #航向角P
-    angle_yaw_pid_I: 0.01 #航向角P
-    angle_yaw_pid_D: 0.024 #航向角        
+    angle_yaw_pid_I: 0.01 #航向角I
+    angle_yaw_pid_D: 0.024 #航向角 D       
     rate_yaw_pid_P: 1.0 #航向角速度P
     rate_yaw_pid_I: 0.0 #航向角速度I
-    rate_yaw_pid_D: 0.0 #航向角速度        
+    rate_yaw_pid_D: 0.0 #航向角速度D    
+    
+    pos_x_pid_P: 1.0 #x轴位置P
+    pos_x_pid_I: 0.1 #x轴位置I
+    pos_x_pid_D: 0.0 #x轴位置        
+    vel_x_pid_P: 1.0 #x轴速度P
+    vel_x_pid_I: 0.0 #x轴速度I
+    vel_x_pid_D: 0.0 #x轴速度D
+
+    pos_y_pid_P: 1.0 #y轴位置P
+    pos_y_pid_I: 0.1 #y轴位置I
+    pos_y_pid_D: 0.0 #y轴位置        
+    vel_y_pid_P: 1.0 #y轴速度P
+    vel_y_pid_I: 0.0 #y轴速度I
+    vel_y_pid_D: 0.0 #y轴速度D
+
     pos_z_pid_P: 1.2 #z轴位置P
     pos_z_pid_I: 0.1 #z轴位置I
     pos_z_pid_D: 0.0 #z轴位置        
