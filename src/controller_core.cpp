@@ -48,11 +48,11 @@ Controller::Controller(std::string node_name):Node(node_name){
   dvl_subscriber = this->create_subscription<geometry_msgs::msg::TwistWithCovarianceStamped>(
     "/msg_adapter/dvl/twist", 10, std::bind(&Controller::Dvl_callback, this, _1));       //订阅状态数据
 
-  depth_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::DepthStatus>(
-    "/sealien_mavros/depthFinder", 10, std::bind(&Controller::Depth_callback, this, _1));       //订阅深度数据
+  depth_subscriber = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+    "/msg_adapter/depth/pose", 10, std::bind(&Controller::Depth_callback, this, _1));       //订阅深度数据
 
-  height_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::SonarAltimeterStatus>(
-    "/sealien_mavros/heightStatus", 10, std::bind(&Controller::Height_callback, this, _1));       //订阅高度数据
+  height_subscriber = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+    "/msg_adapter/sonar/pose", 10, std::bind(&Controller::Height_callback, this, _1));       //订阅高度数据
 
   odom_subscriber = this->create_subscription<nav_msgs::msg::Odometry>("/odometry/filtered", 10,
     std::bind(&Controller::odom_callback, this, _1));       //订阅重置参考点指令
@@ -893,12 +893,12 @@ void Controller::Dvl_callback(const geometry_msgs::msg::TwistWithCovarianceStamp
 
 }
 
-void Controller::Depth_callback(const sealien_ctrlpilot_msgmanagement::msg::DepthStatus& msg){
-  status.depth = msg.depth_m[0]; //取第一个深度计数据
+void Controller::Depth_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg){
+  status.depth = msg.pose.pose.position.z; //取第一个深度计数据
 }
 
-void Controller::Height_callback(const sealien_ctrlpilot_msgmanagement::msg::SonarAltimeterStatus& msg){
-  status.sonar_height = msg.near_dist_cm[0]; //取第一个声呐数据
+void Controller::Height_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg){
+  status.sonar_height = msg.pose.pose.position.z; //转换成单位m; //取第一个声呐数据
 }
 
 void Controller::PathTrackStatus_callback(const std_msgs::msg::Bool& msg){

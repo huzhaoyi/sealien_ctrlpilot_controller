@@ -247,8 +247,8 @@ private:
   void ImuPos_callback(const geometry_msgs::msg::PoseStamped& msg);
   void ImuData_callback(const sensor_msgs::msg::Imu& msg);
   void Dvl_callback(const geometry_msgs::msg::TwistWithCovarianceStamped& msg);
-  void Depth_callback(const sealien_ctrlpilot_msgmanagement::msg::DepthStatus& msg);
-  void Height_callback(const sealien_ctrlpilot_msgmanagement::msg::SonarAltimeterStatus& msg);
+  void Depth_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg);
+  void Height_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg);
   void resetRef_callback(const std_msgs::msg::Bool& msg);
   void odom_callback(const nav_msgs::msg::Odometry& msg);
   void trackCmd_callback(const geometry_msgs::msg::Twist& msg);
@@ -267,8 +267,8 @@ private:
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>::SharedPtr TwistCmd_subscriber;      //订阅遥控指令
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr imuPos_subscriber;                //订阅状态数据
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imuData_subscriber;                //订阅状态数据
-  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::DepthStatus>::SharedPtr  depth_subscriber;     //订阅深度数据
-  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::SonarAltimeterStatus>::SharedPtr height_subscriber;    //订阅高度数据
+  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr  depth_subscriber;     //订阅深度数据
+  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr height_subscriber;    //订阅高度数据
   rclcpp::Subscription<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr dvl_subscriber;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber;   //订阅定位模块的位置信息，只使用x、y、和yaw角
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr pathTrackStatus_subscriber;    //订阅路径跟踪状态
