@@ -46,9 +46,9 @@ void PilotNone::output(void){
   controller_->manual_output.y = vel_output.y;
   controller_->manual_output.z = vel_output.z;
 
-  controller_->manual_output.roll = rate_output.x;
-  controller_->manual_output.pitch = rate_output.y;
-  controller_->manual_output.yaw = rate_output.z;
+  controller_->manual_output.roll   = rate_output.x;
+  controller_->manual_output.pitch  = rate_output.y;
+  controller_->manual_output.yaw    = rate_output.z;
  }
 
  void PilotManual::reset(void){

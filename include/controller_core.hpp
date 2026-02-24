@@ -15,9 +15,11 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include "sensor_msgs/msg/imu.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/point.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/twist_cmd.hpp"
+#include "geometry_msgs/msg/twist_with_covariance_stamped.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/imu_nav_status.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/depth_status.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/sonar_altimeter_status.hpp"
@@ -27,33 +29,33 @@
 
 namespace ControllerNS{
 
-#define PID_ANGLE_ROLL_INTEGRATION_LIMIT  (5.0f)
-#define PID_ANGLE_PITCH_INTEGRATION_LIMIT (5.0f)
+#define PID_ANGLE_ROLL_INTEGRATION_LIMIT  (1.0f)
+#define PID_ANGLE_PITCH_INTEGRATION_LIMIT (1.0f)
 #define PID_ANGLE_YAW_INTEGRATION_LIMIT   (1.0f)
 
-#define PID_RATE_ROLL_INTEGRATION_LIMIT   (5.0f)
-#define PID_RATE_PITCH_INTEGRATION_LIMIT  (5.0f)
-#define PID_RATE_YAW_INTEGRATION_LIMIT    (5.0f)
+#define PID_RATE_ROLL_INTEGRATION_LIMIT   (1.0f)
+#define PID_RATE_PITCH_INTEGRATION_LIMIT  (1.0f)
+#define PID_RATE_YAW_INTEGRATION_LIMIT    (1.0f)
 
-#define PID_ANGLE_ROLL_OUTPUT_LIMIT       (10.0f)
-#define PID_ANGLE_PITCH_OUTPUT_LIMIT      (10.0f)
+#define PID_ANGLE_ROLL_OUTPUT_LIMIT       (1.0f)
+#define PID_ANGLE_PITCH_OUTPUT_LIMIT      (1.0f)
 #define PID_ANGLE_YAW_OUTPUT_LIMIT        (1.0f)
 
-#define PID_RATE_ROLL_OUTPUT_LIMIT        (10.0f)
-#define PID_RATE_PITCH_OUTPUT_LIMIT       (10.0f)
+#define PID_RATE_ROLL_OUTPUT_LIMIT        (1.0f)
+#define PID_RATE_PITCH_OUTPUT_LIMIT       (11.0f)
 #define PID_RATE_YAW_OUTPUT_LIMIT         (1.0f)
 
 
-#define PID_POS_X_INTEGRATION_LIMIT      (5.0f)
-#define PID_POS_Y_INTEGRATION_LIMIT      (5.0f)
+#define PID_POS_X_INTEGRATION_LIMIT      (1.0f)
+#define PID_POS_Y_INTEGRATION_LIMIT      (1.0f)
 #define PID_POS_Z_INTEGRATION_LIMIT      (1.0f)
 
 #define PID_VELOCITY_X_INTEGRATION_LIMIT (5.0f)
 #define PID_VELOCITY_Y_INTEGRATION_LIMIT (5.0f)
 #define PID_VELOCITY_Z_INTEGRATION_LIMIT (0.5f)
 
-#define PID_POS_X_OUTPUT_LIMIT           (10.0f)
-#define PID_POS_Y_OUTPUT_LIMIT           (10.0f)
+#define PID_POS_X_OUTPUT_LIMIT           (1.0f)
+#define PID_POS_Y_OUTPUT_LIMIT           (1.0f)
 #define PID_POS_Z_OUTPUT_LIMIT           (1.0f)
 
 #define PID_VELOCITY_X_OUTPUT_LIMIT      (1.0f)
@@ -71,10 +73,10 @@ namespace ControllerNS{
 #define DEFUALT_YAW_LIMIT   (180.0f)
 #define DEFUALT_DEPTH_MIN   (-100.0f)//向上为正
 #define DEFUALT_DEPTH_MAN   (0.0f)  //向上为正
-#define DEFUALT_X_MIN   (-10000.0f)
-#define DEFUALT_X_MAN   (10000.0f)  
-#define DEFUALT_Y_MIN   (-10000.0f)
-#define DEFUALT_Y_MAN   (10000.0f)  
+#define DEFUALT_X_MIN   (-100000.0f)
+#define DEFUALT_X_MAN   (100000.0f)  
+#define DEFUALT_Y_MIN   (-100000.0f)
+#define DEFUALT_Y_MAN   (100000.0f)  
 #define DEFUALT_ALT_SOURCE  (0)  //默认高度来源是测距声呐
 #define DEFUALT_ALT_MIN  (0)  //默认高度最小值
 #define DEFUALT_ALT_MAX  (20)  //默认高度最大值
@@ -90,6 +92,7 @@ namespace ControllerNS{
 #define LIMIT(x, min, max)   (x<min? min:(x>max? max:x))
 #define DEADZONE(x, down, up) (x<down? x:(x>up? x:0))
 #define NORMALIZE_YAW(x) (x>180.0? (x-360.0):(x<-180? (x+360.0):x))
+#define DEG2RAD (180.0/M_PI)
 //exp函数系数
 #define COEF_a   (0.25)     //a越大，平缓段越长；a越小，平缓段越短
 #define COEF_b   (2)        //大斜率段平移
@@ -221,7 +224,6 @@ public:
 
   std::map<int, std::shared_ptr<CtrModeBase>> ModeMap;
   GeographicLib::LocalCartesian origin_ref;   //创建一个LocalCartesian对象，用于将经纬度转换为局部笛卡尔坐标
-  bool restRef_flag; //重置参考位置标志量
   bool track_status; //路径跟踪时的状态，0:跟踪任务结束，1:跟踪任务还未结束
   bool have_new_track_status; //有新的路径状态，用于检测路径状态更新
 
@@ -242,7 +244,9 @@ private:
   void timer_1HZ_callback();
 
   void TwistCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::TwistCmd& msg);
-  void Imu_callback(const sealien_ctrlpilot_msgmanagement::msg::ImuNavStatus& msg);
+  void ImuPos_callback(const geometry_msgs::msg::PoseStamped& msg);
+  void ImuData_callback(const sensor_msgs::msg::Imu& msg);
+  void Dvl_callback(const geometry_msgs::msg::TwistWithCovarianceStamped& msg);
   void Depth_callback(const sealien_ctrlpilot_msgmanagement::msg::DepthStatus& msg);
   void Height_callback(const sealien_ctrlpilot_msgmanagement::msg::SonarAltimeterStatus& msg);
   void resetRef_callback(const std_msgs::msg::Bool& msg);
@@ -261,10 +265,11 @@ private:
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr test_publisher; 
 
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>::SharedPtr TwistCmd_subscriber;      //订阅遥控指令
-  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::ImuNavStatus>::SharedPtr imu_subscriber;                //订阅状态数据
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr imuPos_subscriber;                //订阅状态数据
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imuData_subscriber;                //订阅状态数据
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::DepthStatus>::SharedPtr  depth_subscriber;     //订阅深度数据
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::SonarAltimeterStatus>::SharedPtr height_subscriber;    //订阅高度数据
-  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr resetRef_subscriber;   //订阅重置参考经纬度指令，会使用当前经纬度作为参考
+  rclcpp::Subscription<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr dvl_subscriber;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber;   //订阅定位模块的位置信息，只使用x、y、和yaw角
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr pathTrackStatus_subscriber;    //订阅路径跟踪状态
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr track_cmd_subscriber;   //订阅路径跟踪模块下发的速度
