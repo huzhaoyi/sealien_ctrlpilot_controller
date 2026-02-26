@@ -17,11 +17,11 @@ def generate_launch_description():
             name='controller',
             output='screen',
             parameters=[os.path.join(get_package_share_directory("sealien_ctrlpilot_controller"), 'config', 'default.yaml')],
-            remappings=[
-                # ('/sealien_mavros/imu', '/ImuNavStatus'),
-                # ('/sealien_mavros/depthFinder', '/DepthStatus'),
-                # ('/sealien_mavros/heightStatus', '/SonarAltimeterStatus'),
-            ]
+            # remappings=[
+            #     # ('/sealien_mavros/imu', '/ImuNavStatus'),
+            #     # ('/sealien_mavros/depthFinder', '/DepthStatus'),
+            #     # ('/sealien_mavros/heightStatus', '/SonarAltimeterStatus'),
+            # ]
            ),
 ])
 

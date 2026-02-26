@@ -40,7 +40,7 @@ Controller::Controller(std::string node_name):Node(node_name){
     "/obc/twist_cmd", 10, std::bind(&Controller::TwistCmd_callback, this, _1));       //订阅控制指令
 
   imuPos_subscriber = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-    "/msg_adapter/imuPos", 10, std::bind(&Controller::ImuPos_callback, this, _1));       //订阅状态数据
+    "/msg_adapter/imuPose", 10, std::bind(&Controller::ImuPos_callback, this, _1));       //订阅状态数据
 
   imuData_subscriber = this->create_subscription<sensor_msgs::msg::Imu>(
     "/msg_adapter/imu_data", 10, std::bind(&Controller::ImuData_callback, this, _1));       //订阅状态数据
@@ -63,10 +63,12 @@ Controller::Controller(std::string node_name):Node(node_name){
   pathTrackStatus_subscriber =  this->create_subscription<std_msgs::msg::Bool>(
     "/pure_pursuit_node/path_track_status", 10, std::bind(&Controller::PathTrackStatus_callback, this, _1));       //订阅路径跟踪状态
 
+  imu_twist_subscriber =  this->create_subscription<geometry_msgs::msg::Twist>(
+    "/msg_adapter/imu/twist", 10, std::bind(&Controller::imu_twist_callback, this, _1));       //订阅imu速度
 
   target_angle_publisher  = this->create_publisher<geometry_msgs::msg::Point>("~/target_angle", 10);
   target_pos_publisher    = this->create_publisher<geometry_msgs::msg::Point>("~/target_pos", 10);
-  // test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
+  test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
 
 #if PUB_THRUSTER
   thru_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCmd>("~/thruster_cmd", 10); 
@@ -167,6 +169,12 @@ void Controller::controller_init(){
 
   config.ref_alt = this->get_parameter("ref_lat").as_double();
   config.ref_lon = this->get_parameter("ref_lon").as_double();
+  config.x_min = this->get_parameter("x_min").as_double();
+  config.x_max = this->get_parameter("x_max").as_double();
+  config.y_min = this->get_parameter("y_min").as_double();
+  config.y_max = this->get_parameter("y_max").as_double();
+
+
   config.ref_alt = this->get_parameter("ref_alt").as_double();
   
   origin_ref.Reset(config.ref_alt, config.ref_lon, config.ref_alt);  //重置原点
@@ -219,6 +227,11 @@ void Controller::controller_init(){
   status.reset_target_yaw_flag = 0;  //
   status.track_status = false;  //默认跟踪结束
   status.angle_add = 0.0;
+
+  x_target_base   = 0.0;  //x轴位置基础值，切换到位置模式时置为当前值
+  x_target_delta  = 0.0;  //x轴位置遥控器增量值，累加
+  y_target_base   = 0.0;   //y轴位置基础值，切换到位置模式时置为当前值
+  y_target_delta  = 0.0; //y轴位置遥控器增量值，累加
 
   thru_cmd.thru1  = 1500;  //推进器1500表示转速0，转速范围是1000~2000
   thru_cmd.thru2  = 1500;
@@ -492,6 +505,51 @@ void Controller::position_controller_init(void){
   pid_vx.init(vel_x_pid_P, vel_x_pid_I, vel_x_pid_D, vel_x_integration_limit, vel_x_output_limit, config.dt);
   pid_vy.init(vel_y_pid_P, vel_y_pid_I, vel_y_pid_D, vel_y_integration_limit, vel_y_output_limit, config.dt);
   pid_vz.init(vel_z_pid_P, vel_z_pid_I, vel_z_pid_D, vel_z_integration_limit, vel_z_output_limit, config.dt);
+
+
+#if PRINT_PARAMS
+  RCLCPP_INFO(this->get_logger(), "pos_x_integration_limit[%f]", pos_x_integration_limit);
+  RCLCPP_INFO(this->get_logger(), "pos_y_integration_limit[%f]", pos_y_integration_limit);
+  RCLCPP_INFO(this->get_logger(), "pos_z_integration_limit[%f]", pos_z_integration_limit);
+
+  RCLCPP_INFO(this->get_logger(), "vel_x_integration_limit[%f]", vel_x_integration_limit);
+  RCLCPP_INFO(this->get_logger(), "vel_y_integration_limit[%f]", vel_y_integration_limit);
+  RCLCPP_INFO(this->get_logger(), "vel_z_integration_limit[%f]", vel_z_integration_limit);
+
+  RCLCPP_INFO(this->get_logger(), "pos_x_output_limit[%f]", pos_x_output_limit);
+  RCLCPP_INFO(this->get_logger(), "pos_y_output_limit[%f]", pos_y_output_limit);
+  RCLCPP_INFO(this->get_logger(), "pos_z_output_limit[%f]", pos_z_output_limit);
+
+  RCLCPP_INFO(this->get_logger(), "vel_x_output_limit[%f]", vel_x_output_limit);
+  RCLCPP_INFO(this->get_logger(), "vel_y_output_limit[%f]", vel_y_output_limit);
+  RCLCPP_INFO(this->get_logger(), "vel_z_output_limit[%f]", vel_z_output_limit);
+
+  RCLCPP_INFO(this->get_logger(), "pos_x_pid_P[%f]", pos_x_pid_P);
+  RCLCPP_INFO(this->get_logger(), "pos_x_pid_I[%f]", pos_x_pid_I);
+  RCLCPP_INFO(this->get_logger(), "pos_x_pid_D[%f]", pos_x_pid_D);
+
+  RCLCPP_INFO(this->get_logger(), "vel_x_pid_P[%f]", vel_x_pid_P);
+  RCLCPP_INFO(this->get_logger(), "vel_x_pid_I[%f]", vel_x_pid_I);
+  RCLCPP_INFO(this->get_logger(), "vel_x_pid_D[%f]", vel_x_pid_D);
+
+  RCLCPP_INFO(this->get_logger(), "pos_y_pid_P[%f]", pos_y_pid_P);
+  RCLCPP_INFO(this->get_logger(), "pos_y_pid_I[%f]", pos_y_pid_I);
+  RCLCPP_INFO(this->get_logger(), "pos_y_pid_D[%f]", pos_y_pid_D);
+
+  RCLCPP_INFO(this->get_logger(), "vel_y_pid_P[%f]", vel_y_pid_P);
+  RCLCPP_INFO(this->get_logger(), "vel_y_pid_I[%f]", vel_y_pid_I);
+  RCLCPP_INFO(this->get_logger(), "vel_y_pid_D[%f]", vel_y_pid_D);
+
+  RCLCPP_INFO(this->get_logger(), "pos_z_pid_P[%f]", pos_z_pid_P);
+  RCLCPP_INFO(this->get_logger(), "pos_z_pid_I[%f]", pos_z_pid_I);
+  RCLCPP_INFO(this->get_logger(), "pos_z_pid_D[%f]", pos_z_pid_D);
+
+  RCLCPP_INFO(this->get_logger(), "vel_z_pid_P[%f]", vel_z_pid_P);
+  RCLCPP_INFO(this->get_logger(), "vel_z_pid_I[%f]", vel_z_pid_I);
+  RCLCPP_INFO(this->get_logger(), "vel_z_pid_D[%f]", vel_z_pid_D);
+#endif
+
+
 }
 
 /********************************************************************************
@@ -510,8 +568,12 @@ void Controller::position_controller_reset(float z_status){
 
 
   //初始化XY轴目标值
-  pos_target.x = status.pos.x;
-  pos_target.y = status.pos.y;
+  x_target_base = status.pos.x;
+  y_target_base = status.pos.y;
+
+  x_target_delta = 0.0;
+  y_target_delta = 0.0;
+
   pos_target.z = z_status;
 
   // RCLCPP_INFO(this->get_logger(), "pos_target.z[%f]", pos_target.z);
@@ -543,7 +605,7 @@ void Controller::process_yaw_setpoint(void){
     status.reset_target_yaw_flag = 0;   //清除标志量，等待下次触发
   }
 
-  status.angle_add -= config.yaw_gain * twist_cmd.yaw;
+  status.angle_add += config.yaw_gain * twist_cmd.yaw;
   status.angle_add = LIMIT(status.angle_add, -config.yaw_limit, config.yaw_limit);   //角度目标值限幅
 
   if(status.yaw_base == DEFUALT_YAW_BASE){  //处理切换到自动模式时，目标角度突变问题
@@ -585,10 +647,20 @@ void Controller::process_z_setpoint(void){
  * @return :NONE
  *********************************************************************************/
 void Controller::process_xy_setpoint(void){
-  pos_target.x += config.xy_gain * twist_cmd.x;
-  pos_target.x = LIMIT(pos_target.x, config.x_min, config.x_max);
+  geometry_msgs::msg::Point p_in, p_out;
+  x_target_delta -= config.xy_gain * twist_cmd.x;
+  y_target_delta -= config.xy_gain * twist_cmd.y;
 
-  pos_target.y += config.xy_gain * twist_cmd.y;
+  p_in.x = x_target_delta;
+  p_in.y = y_target_delta;
+
+  pointBaseLinkToOdom(p_in, p_out);  
+
+
+  pos_target.x = x_target_base + p_out.x;
+  pos_target.y = y_target_base + p_out.y;
+
+  pos_target.x = LIMIT(pos_target.x, config.x_min, config.x_max);
   pos_target.y = LIMIT(pos_target.y, config.y_min, config.y_max);
 }
 
@@ -639,7 +711,7 @@ void Controller::controller_step(void){
  * @return :NONE
  *********************************************************************************/
 void Controller::control_output(void){
-  if(twist_cmd.lock_status != 0){  //不上锁的时候输出控制器计算值
+  if(twist_cmd.lock_status != 1){  //不上锁的时候输出控制器计算值
     ModeMap[twist_cmd.ctrl_mode]->output();
   }else{
     clear_output();
@@ -728,7 +800,9 @@ void Controller::attitude_angle_pid(geometry_msgs::msg::Point& rate_desired, con
 
   //规范到±180度范围
   yaw_error = NORMALIZE_YAW(yaw_error);
-  rate_desired.z = -pid_angle_yaw.pid_update(yaw_error);
+  rate_desired.z = pid_angle_yaw.pid_update(yaw_error);
+
+  // RCLCPP_INFO(this->get_logger(), "pitch_error[%f],rate_desired.y[%f]",pitch_error, rate_desired.y);
 }
 
 /********************************************************************************
@@ -788,20 +862,28 @@ void Controller::position_controller_update(geometry_msgs::msg::Point& vel_outpu
  *********************************************************************************/
 void Controller::position_pos_pid(geometry_msgs::msg::Point& vel_desired, const geometry_msgs::msg::Point pos_desired,
   const geometry_msgs::msg::Point pos_actual){
+  
+  geometry_msgs::msg::Point pint,pout;
+  pint.x = pos_desired.x - pos_actual.x;
+  pint.y = pos_desired.y - pos_actual.y;
+  pointOdomToBaseLink(pint, pout);
 
-  float x_error = pos_desired.x - pos_actual.x;
-  float y_error = pos_desired.y - pos_actual.y;
+  float x_error = pout.x;
+  float y_error = pout.y;
   float z_error = -pos_desired.z + pos_actual.z;
 
   //死区处理，也是控制精度处理
-  x_error = DEADZONE(x_error, -config.ctrl_accuracy, config.ctrl_accuracy);
-  y_error = DEADZONE(x_error, -config.ctrl_accuracy, config.ctrl_accuracy);
-  z_error = DEADZONE(x_error, -config.ctrl_accuracy, config.ctrl_accuracy);
+  x_error = DEADZONE(x_error, -0.5*config.ctrl_accuracy, 0.5*config.ctrl_accuracy);
+  y_error = DEADZONE(y_error, -0.5*config.ctrl_accuracy, 0.5*config.ctrl_accuracy);
+  z_error = DEADZONE(z_error, -config.ctrl_accuracy, config.ctrl_accuracy);
 
-  // No position input, no x,y position control enabled
   vel_desired.x = pid_x.pid_update(x_error);
   vel_desired.y = pid_y.pid_update(y_error);
   vel_desired.z = pid_z.pid_update(z_error);
+  // RCLCPP_INFO(this->get_logger(), "vel_desired.z[%f]",vel_desired.z);
+  std_msgs::msg::Float32 test;
+  test.data = vel_desired.x;
+  test_publisher->publish(test);
 }
 
 /********************************************************************************
@@ -817,11 +899,13 @@ void Controller::position_velocity_pid(geometry_msgs::msg::Point& vel_output, co
   float x_vel_error = vel_desired.x - vel_actual.x;
   float y_vel_error = vel_desired.y - vel_actual.y;
   float z_vel_error = vel_desired.z - vel_actual.z;
+
   // X and Y
-  vel_output.x = pid_vx.pid_update(x_vel_error);
-  vel_output.y = pid_vx.pid_update(y_vel_error);
+  vel_output.x = -pid_vx.pid_update(x_vel_error);
+  vel_output.y = -pid_vy.pid_update(y_vel_error);
   // Z
-  vel_output.z = pid_vx.pid_update(z_vel_error);
+  vel_output.z = pid_vz.pid_update(z_vel_error);
+
 }
 
 /********************************************************************************
@@ -864,12 +948,14 @@ void Controller::ImuPos_callback(const geometry_msgs::msg::PoseStamped& msg){
   tf2::Matrix3x3 m(tf_quat);
   m.getRPY(roll, pitch, yaw);
  
-  status.angle.x = roll * DEG2RAD;
-  status.angle.y = pitch * DEG2RAD;
-  // status.angle.z = yaw * DEG2RAD;
+  status.angle.x = roll * RAD2DEG;
+  status.angle.y = pitch * RAD2DEG;
+  status.angle.z = NORMALIZE_YAW(yaw * RAD2DEG);
+
+  // RCLCPP_INFO(this->get_logger(),"yaw[%f]",status.angle.z);
 
   if(config.use_imu2navi){  //使用IMU的位置作为位置参考
-    status.angle.z = NORMALIZE_YAW(yaw * DEG2RAD);
+    // status.angle.z = NORMALIZE_YAW(yaw * RAD2DEG);
     status.pos.x = msg.pose.position.x;
     status.pos.y = msg.pose.position.y;
     status.imu_alt = msg.pose.position.z;
@@ -887,10 +973,14 @@ void Controller::ImuData_callback(const sensor_msgs::msg::Imu& msg){
 }
 
 void Controller::Dvl_callback(const geometry_msgs::msg::TwistWithCovarianceStamped& msg){
-  status.vel.x = msg.twist.twist.linear.x;
-  status.vel.y = msg.twist.twist.linear.y;
-  status.vel.z = msg.twist.twist.linear.z;
+  if(twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD1 ||  //位置保持模式速度使用dvl速度，非位置保持模式使用imu速度
+     twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD2 ||
+     twist_cmd.ctrl_mode == PILOT_MODE_MISSION ){
 
+    // status.vel.x = msg.twist.twist.linear.x;
+    // status.vel.y = msg.twist.twist.linear.y;
+    // status.vel.z = msg.twist.twist.linear.z;
+  }
 }
 
 void Controller::Depth_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg){
@@ -898,7 +988,7 @@ void Controller::Depth_callback(const geometry_msgs::msg::PoseWithCovarianceStam
 }
 
 void Controller::Height_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg){
-  status.sonar_height = msg.pose.pose.position.z; //转换成单位m; //取第一个声呐数据
+  status.sonar_height = msg.pose.pose.position.z; //单位m;
 }
 
 void Controller::PathTrackStatus_callback(const std_msgs::msg::Bool& msg){
@@ -910,10 +1000,23 @@ void Controller::PathTrackStatus_callback(const std_msgs::msg::Bool& msg){
  
   status.track_status = msg.data; 
 
-  //清楚计数，否则计数超时认为跟踪节点断连。
+  //清除计数，否则计数超时认为跟踪节点断连。
   //会进入位置保持模式，保持在当前位置。需要切换其他模式才可以操纵.
   //或者重新启动路径跟踪节点
   std::dynamic_pointer_cast<PilotMission>(ModeMap[PILOT_MODE_MISSION])->reset_count();
+}
+
+void Controller::imu_twist_callback(const geometry_msgs::msg::Twist& msg){
+  if(twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD1 ||  //位置保持模式速度使用dvl速度，非位置保持模式使用imu速度
+     twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD2 ||
+     twist_cmd.ctrl_mode == PILOT_MODE_MISSION ){
+
+    return;
+  }
+
+  status.vel.x = msg.linear.x;
+  status.vel.y = msg.linear.y;
+  status.vel.z = msg.linear.z;
 }
 
 void Controller::trackCmd_callback(const geometry_msgs::msg::Twist& msg){
@@ -941,9 +1044,20 @@ void Controller::odom_callback(const nav_msgs::msg::Odometry& msg){
   tf2::Matrix3x3 m(tf_quat);
   m.getRPY(roll, pitch, yaw);
  
-  status.angle.z = yaw*DEG2RAD;  //角度转换成°
+  // status.angle.z = yaw*RAD2DEG;  //角度转换成°
+
+  // geometry_msgs::msg::Point pout;
+  // pointTransform(msg.pose.pose.position,  pout);
+
+  // status.pos.x = pout.x;
+  // status.pos.y = pout.y;
+
   status.pos.x = msg.pose.pose.position.x;
   status.pos.y = msg.pose.pose.position.y;
+
+  status.vel.x = msg.twist.twist.linear.x;
+  status.vel.y = msg.twist.twist.linear.y;
+  status.vel.z = msg.twist.twist.linear.z;
 }
 
 /********************************************************************************
@@ -975,6 +1089,28 @@ void Controller::Thru_Cmd_Mix(void){
   thru_cmd.thru10 = 1500;    
   thru_cmd.thru11 = 1500;  
   thru_cmd.thru12 = 1500;  
+}
+
+/********************************************************************************
+ * @brief  :将位置误差从odom转换到base_link
+ * @param  NONE
+ * @return :NONE
+ *********************************************************************************/
+void Controller::pointOdomToBaseLink(geometry_msgs::msg::Point p_in,  geometry_msgs::msg::Point& p_out){
+  float yaw = status.angle.z/RAD2DEG;
+  p_out.x = p_in.x * cos(yaw) + p_in.y * sin(yaw);
+  p_out.y = -p_in.x * sin(yaw) + p_in.y * cos(yaw);
+}
+
+/********************************************************************************
+ * @brief  :将位置误差从base_link转换到odom
+ * @param  NONE
+ * @return :NONE
+ *********************************************************************************/
+void Controller::pointBaseLinkToOdom(geometry_msgs::msg::Point p_in,  geometry_msgs::msg::Point& p_out){
+  float yaw = status.angle.z/RAD2DEG;
+  p_out.x = p_in.x * cos(yaw) - p_in.y * sin(yaw);
+  p_out.y = p_in.x * sin(yaw) + p_in.y * cos(yaw);
 }
 
 } //end namespace ControllerNS

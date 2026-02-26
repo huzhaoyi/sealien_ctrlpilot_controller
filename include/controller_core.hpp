@@ -27,6 +27,7 @@
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/bool.hpp"
 
+
 namespace ControllerNS{
 
 #define PID_ANGLE_ROLL_INTEGRATION_LIMIT  (1.0f)
@@ -92,7 +93,8 @@ namespace ControllerNS{
 #define LIMIT(x, min, max)   (x<min? min:(x>max? max:x))
 #define DEADZONE(x, down, up) (x<down? x:(x>up? x:0))
 #define NORMALIZE_YAW(x) (x>180.0? (x-360.0):(x<-180? (x+360.0):x))
-#define DEG2RAD (180.0/M_PI)
+// #define DEG2RAD (180.0/M_PI)
+#define RAD2DEG (180.0/M_PI)
 //exp函数系数
 #define COEF_a   (0.25)     //a越大，平缓段越长；a越小，平缓段越短
 #define COEF_b   (2)        //大斜率段平移
@@ -216,6 +218,10 @@ public:
   Mtwist_t controller_output;       //控制器输出输出
   sealien_ctrlpilot_msgmanagement::msg::TwistCmd output;     //最终输出
   geometry_msgs::msg::Point pos_target;
+  float x_target_base;  //x轴位置基础值，切换到位置模式时置为当前值
+  float x_target_delta;  //x轴位置遥控器增量值，累加
+  float y_target_base;   //y轴位置基础值，切换到位置模式时置为当前值
+  float y_target_delta; //y轴位置遥控器增量值，累加
   geometry_msgs::msg::Point angle_target;
   geometry_msgs::msg::Point rate_target;  //路径跟踪时的角速度指令，只使用航向角速度
   geometry_msgs::msg::Point vel_target;   //路径跟踪时的速度指令
@@ -233,6 +239,8 @@ private:
   void position_controller_init(void);
   void setpoint_mapping(void);
   void Thru_Cmd_Mix(void);
+  void pointOdomToBaseLink(geometry_msgs::msg::Point p_in,  geometry_msgs::msg::Point& p_out);
+  void pointBaseLinkToOdom(geometry_msgs::msg::Point p_in,  geometry_msgs::msg::Point& p_out);
  
   void controller_mode_sw(void);
   void control_output(void);
@@ -253,6 +261,7 @@ private:
   void odom_callback(const nav_msgs::msg::Odometry& msg);
   void trackCmd_callback(const geometry_msgs::msg::Twist& msg);
   void PathTrackStatus_callback(const std_msgs::msg::Bool& msg);
+  void imu_twist_callback(const geometry_msgs::msg::Twist& msg);
 
   rclcpp::TimerBase::SharedPtr timer_cycle_20HZ;
   rclcpp::TimerBase::SharedPtr timer_cycle_10HZ;
@@ -273,6 +282,7 @@ private:
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber;   //订阅定位模块的位置信息，只使用x、y、和yaw角
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr pathTrackStatus_subscriber;    //订阅路径跟踪状态
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr track_cmd_subscriber;   //订阅路径跟踪模块下发的速度
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr imu_twist_subscriber;  //订阅imu的速度
 
   // rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr control_output_publisher; 
   
