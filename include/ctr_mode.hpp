@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <controller_core.hpp>
 #include "geometry_msgs/msg/point.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 
 namespace ControllerNS{
 
@@ -160,9 +161,10 @@ public:
   virtual void reset(void);
   virtual void output(void);
 
-  uint32_t reset_count(void){lost_track_status_count = 0;}
+  void reset_count(void){lost_track_status_count = 0;}
 private:
   uint32_t lost_track_status_count;  //计时，判断是否丢失路径跟踪状态
+
 };
 
 

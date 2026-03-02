@@ -11,7 +11,8 @@
 #include "ctr_mode.hpp"
 
 namespace ControllerNS{
-//NONE模式
+
+/****************NONE模式*******************/
 void PilotNone::setpoint_mapping(void){
  //do nothing
 };
@@ -34,7 +35,7 @@ void PilotNone::output(void){
 };
 
 
-//手动模式
+/****************手动模式*******************/
  void PilotManual::setpoint_mapping(void){
   //do nothing
  }
@@ -66,7 +67,7 @@ void PilotNone::output(void){
 
 
 
-//稳定模式1
+/****************稳定模式1*******************/
 void PilotStablize1::setpoint_mapping(void){
   controller_->process_yaw_setpoint();
   controller_->process_z_setpoint();
@@ -90,7 +91,7 @@ void PilotStablize1::output(void){
   controller_->output.yaw = rate_output.z;
 };
 
-//稳定模式2
+/****************稳定模式2*******************/
 void PilotStablize2::setpoint_mapping(void){
   controller_->process_yaw_setpoint();
   controller_->process_z_setpoint();
@@ -141,7 +142,7 @@ void PilotStablize2::output(void){
 };
 
 
-//深度控制
+/****************深度控制*******************/
 void PilotAutodepth::setpoint_mapping(void){
   controller_->process_z_setpoint();
 };
@@ -165,7 +166,7 @@ void PilotAutodepth::output(void){
 };
 
 
-//高度控制
+/****************高度控制*******************/
 void PilotAutoheight::setpoint_mapping(void){
   controller_->process_z_setpoint();
 };
@@ -199,7 +200,7 @@ void PilotAutoheight::output(void){
   controller_->output.yaw = rate_output.z;
 };
 
-//艏向控制
+/****************艏向控制*******************/
 void PilotAutoDirection::setpoint_mapping(void){
   controller_->process_yaw_setpoint();
 };
@@ -222,7 +223,7 @@ void PilotAutoDirection::output(void){
   controller_->output.yaw = rate_output.z;
 };
 
-//位置保持1
+/****************位置保持1*******************/
 void PilotAutoHold1::setpoint_mapping(void){
   controller_->process_yaw_setpoint();
   controller_->process_xy_setpoint();
@@ -249,7 +250,7 @@ void PilotAutoHold1::output(void){
   controller_->output.yaw = rate_output.z;
 };
 
-//位置保持2
+/****************位置保持2*******************/
 void PilotAutoHold2::setpoint_mapping(void){
   controller_->process_yaw_setpoint();
   controller_->process_xy_setpoint();
@@ -298,7 +299,7 @@ void PilotAutoHold2::output(void){
   controller_->output.yaw = rate_output.z;
 };
 
-//路径跟踪
+/****************路径跟踪*******************/
 void PilotMission::setpoint_mapping(void){
   if(controller_->have_new_track_status){
     controller_->have_new_track_status = false;
@@ -306,7 +307,11 @@ void PilotMission::setpoint_mapping(void){
     reset();//重置控制器
   }
 
-  if(lost_track_status_count++ > 60 && lost_track_status_count!= 70){  //20HZ更新，大于3秒钟认为丢失路径跟踪节点
+  if(lost_track_status_count < 60){
+    lost_track_status_count++;
+  }
+
+  if(lost_track_status_count >= 60 && lost_track_status_count!= 70){  //20HZ更新，大于3秒钟认为丢失路径跟踪节点
     lost_track_status_count = 70;  //防止再次进入
     controller_->status.track_status = false;   //强制状态为跟踪完成
     controller_->have_new_track_status = true;  //标志有新状态
@@ -320,7 +325,7 @@ void PilotMission::update(void){
     controller_->position_velocity_pid(vel_output, controller_->vel_target, controller_->status.vel);
   
     vel_output.z = controller_->config.thrust_base + vel_output.z;
-
+    // RCLCPP_INFO(controller_->get_logger(), "path track");
   }else{//位置保持
     controller_->attitude_controller_update(rate_output);
 
@@ -340,12 +345,13 @@ void PilotMission::update(void){
     }
 
     controller_->position_controller_update(vel_output, height);
+
+    // RCLCPP_INFO(controller_->get_logger(), "pos hold");
   }
 }
 
 void PilotMission::reset(void){
   controller_->attitude_controller_reset();
-
   if(!controller_->config.track_alt_depth){
     controller_->position_controller_reset(controller_->status.depth);
   }else{
@@ -361,8 +367,30 @@ void PilotMission::reset(void){
     }
     controller_->position_controller_reset(height);
   }
-  
-};
+
+  if(controller_->status.track_status == false){  //从跟踪状态到非跟踪状态
+    RCLCPP_INFO(controller_->get_logger(), "path controller_->got_follow_target[%d]",controller_->got_follow_target);
+    if(controller_->got_follow_target == false){  //没有路径
+      controller_->angle_target.z = controller_->status.yaw_base;
+      controller_->pos_target.x = controller_->x_target_base;
+      controller_->pos_target.y = controller_->y_target_base;
+      RCLCPP_INFO(controller_->get_logger(), "path track  false");
+    }else{//有路径
+      controller_->pos_target.x = controller_->follow_target_pos.x;
+      controller_->pos_target.y = controller_->follow_target_pos.y;
+      
+      if(controller_->follow_direct){
+        controller_->angle_target.z = controller_->follow_target_ang + 180;
+        controller_->angle_target.z = controller_->angle_target.z>180? (controller_->angle_target.z-360):controller_->angle_target.z;
+      }else{
+        controller_->angle_target.z = controller_->follow_target_ang;
+      }
+      
+      RCLCPP_INFO(controller_->get_logger(), "path track  true");
+      controller_->got_follow_target = false;
+    }
+  }
+}
 
 void PilotMission::output(void){
   controller_->output.x = vel_output.x;
@@ -372,6 +400,15 @@ void PilotMission::output(void){
   controller_->output.roll  = rate_output.x;
   controller_->output.pitch = rate_output.y;
   controller_->output.yaw   = rate_output.z;
+
+
+  // controller_->output.x = 0.0;
+  // controller_->output.y = 0.0;
+  // controller_->output.z = 0.0;
+
+  // controller_->output.roll  = 0.0;
+  // controller_->output.pitch = 0.0;
+  // controller_->output.yaw   = 0.0;
 };
 
 

@@ -17,7 +17,9 @@
 
 #include "sensor_msgs/msg/imu.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "geometry_msgs/msg/twist_stamped.hpp"
 #include "geometry_msgs/msg/point.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/twist_cmd.hpp"
 #include "geometry_msgs/msg/twist_with_covariance_stamped.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/imu_nav_status.hpp"
@@ -26,6 +28,9 @@
 #include "sealien_ctrlpilot_msgmanagement/msg/thruster_cmd.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/bool.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/follow_cmd.hpp"
+
+#define msg_FollowCmd sealien_ctrlpilot_msgmanagement::msg::FollowCmd
 
 
 namespace ControllerNS{
@@ -230,9 +235,13 @@ public:
 
   std::map<int, std::shared_ptr<CtrModeBase>> ModeMap;
   GeographicLib::LocalCartesian origin_ref;   //创建一个LocalCartesian对象，用于将经纬度转换为局部笛卡尔坐标
-  bool track_status; //路径跟踪时的状态，0:跟踪任务结束，1:跟踪任务还未结束
+  // bool track_status; //路径跟踪时的状态，0:跟踪任务结束，1:跟踪任务还未结束
   bool have_new_track_status; //有新的路径状态，用于检测路径状态更新
 
+  geometry_msgs::msg::Point follow_target_pos; //跟踪的最终目标位置
+  double follow_target_ang;//跟踪的最终目标角度
+  bool follow_direct;  //跟踪的方向，0：前进，1：后退
+  bool got_follow_target;  //跟踪的方向，0：前进，1：后退
 private:
   void controller_init();
   void attitude_controller_init(void);
@@ -259,7 +268,7 @@ private:
   void Height_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg);
   void resetRef_callback(const std_msgs::msg::Bool& msg);
   void odom_callback(const nav_msgs::msg::Odometry& msg);
-  void trackCmd_callback(const geometry_msgs::msg::Twist& msg);
+  void trackCmd_callback(const msg_FollowCmd& msg);
   void PathTrackStatus_callback(const std_msgs::msg::Bool& msg);
   void imu_twist_callback(const geometry_msgs::msg::Twist& msg);
 
@@ -281,7 +290,7 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr dvl_subscriber;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber;   //订阅定位模块的位置信息，只使用x、y、和yaw角
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr pathTrackStatus_subscriber;    //订阅路径跟踪状态
-  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr track_cmd_subscriber;   //订阅路径跟踪模块下发的速度
+  rclcpp::Subscription<msg_FollowCmd>::SharedPtr track_cmd_subscriber;   //订阅路径跟踪模块下发的速度
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr imu_twist_subscriber;  //订阅imu的速度
 
   // rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr control_output_publisher; 

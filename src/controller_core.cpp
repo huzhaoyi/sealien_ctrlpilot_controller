@@ -10,7 +10,7 @@
 
 #include "controller_core.hpp"
 
-#define PRINT_PARAMS     1    //0： 开始时不打印参数，1:开始时打印参数
+#define PRINT_PARAMS     0    //0： 开始时不打印参数，1:开始时打印参数
 #define PUB_THRUSTER     0    //0： 发布twist_cmd，1:发布thruster_cmd
 
 namespace ControllerNS{
@@ -57,7 +57,7 @@ Controller::Controller(std::string node_name):Node(node_name){
   odom_subscriber = this->create_subscription<nav_msgs::msg::Odometry>("/odometry/filtered", 10,
     std::bind(&Controller::odom_callback, this, _1));       //订阅重置参考点指令
 
-  track_cmd_subscriber = this->create_subscription<geometry_msgs::msg::Twist>("/pure_pursuit_node/cmd_vel", 10,
+  track_cmd_subscriber = this->create_subscription<msg_FollowCmd>("/pure_pursuit_node/follow_cmd", 10,
     std::bind(&Controller::trackCmd_callback, this, _1));       //订阅重置参考点指令
 
   pathTrackStatus_subscriber =  this->create_subscription<std_msgs::msg::Bool>(
@@ -68,7 +68,7 @@ Controller::Controller(std::string node_name):Node(node_name){
 
   target_angle_publisher  = this->create_publisher<geometry_msgs::msg::Point>("~/target_angle", 10);
   target_pos_publisher    = this->create_publisher<geometry_msgs::msg::Point>("~/target_pos", 10);
-  test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
+  // test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
 
 #if PUB_THRUSTER
   thru_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCmd>("~/thruster_cmd", 10); 
@@ -94,7 +94,8 @@ void Controller::timer_20HZ_callback(){
 }
 
 void Controller::timer_10HZ_callback(){
-  // RCLCPP_INFO(this->get_logger(), "yaw_base[%f]", status.yaw_base);
+  // RCLCPP_INFO(this->get_logger(), "angle_target.z[%f]", angle_target.z);
+  // RCLCPP_INFO(this->get_logger(), "status.yaw_base[%f]", status.yaw_base);
   // RCLCPP_INFO(this->get_logger(), "yaw_tar[%f], yaw_cur[%f]", angle_target.z, status.angle.z);
 
 }
@@ -227,6 +228,8 @@ void Controller::controller_init(){
   status.reset_target_yaw_flag = 0;  //
   status.track_status = false;  //默认跟踪结束
   status.angle_add = 0.0;
+
+  got_follow_target = false;  //是否获得跟踪目标；路径跟踪时使用
 
   x_target_base   = 0.0;  //x轴位置基础值，切换到位置模式时置为当前值
   x_target_delta  = 0.0;  //x轴位置遥控器增量值，累加
@@ -592,6 +595,10 @@ void Controller::setpoint_mapping(void){
   target_angle_publisher->publish(angle_target);
   target_pos_publisher->publish(pos_target);
 
+ 
+  if(twist_cmd.ctrl_mode != PILOT_MODE_MISSION){  //路径跟踪用
+    got_follow_target = false;
+  }
 }
 
 /********************************************************************************
@@ -881,9 +888,9 @@ void Controller::position_pos_pid(geometry_msgs::msg::Point& vel_desired, const 
   vel_desired.y = pid_y.pid_update(y_error);
   vel_desired.z = pid_z.pid_update(z_error);
   // RCLCPP_INFO(this->get_logger(), "vel_desired.z[%f]",vel_desired.z);
-  std_msgs::msg::Float32 test;
-  test.data = vel_desired.x;
-  test_publisher->publish(test);
+  // std_msgs::msg::Float32 test;
+  // test.data = vel_desired.x;
+  // test_publisher->publish(test);
 }
 
 /********************************************************************************
@@ -996,6 +1003,7 @@ void Controller::PathTrackStatus_callback(const std_msgs::msg::Bool& msg){
 
   if(status.track_status != msg.data){
     have_new_track_status = true;
+    RCLCPP_INFO(this->get_logger(),"have_new_track_status true*********");
   }
  
   status.track_status = msg.data; 
@@ -1019,14 +1027,22 @@ void Controller::imu_twist_callback(const geometry_msgs::msg::Twist& msg){
   status.vel.z = msg.linear.z;
 }
 
-void Controller::trackCmd_callback(const geometry_msgs::msg::Twist& msg){
-  vel_target.x = msg.linear.x;
+void Controller::trackCmd_callback(const msg_FollowCmd& msg){
+  vel_target.x = msg.twist.twist.linear.x;
   vel_target.y = 0.0; //y轴不控
-  vel_target.z = msg.linear.z;
+  vel_target.z = msg.twist.twist.linear.z;
 
   rate_target.x = 0.0;  //roll在本地控
   rate_target.y = 0.0;  //pitch在本地控
-  rate_target.z = msg.angular.z;
+  rate_target.z = msg.twist.twist.angular.z;
+
+  if(status.track_status){
+    follow_target_pos = msg.target; //跟踪的最终目标
+    follow_target_ang = msg.angle_deg;
+    follow_direct = msg.dir;  //跟踪的方向，0：前进，1：后退
+    got_follow_target = true;
+  }
+  
 }
 
 
@@ -1057,7 +1073,7 @@ void Controller::odom_callback(const nav_msgs::msg::Odometry& msg){
 
   status.vel.x = msg.twist.twist.linear.x;
   status.vel.y = msg.twist.twist.linear.y;
-  status.vel.z = msg.twist.twist.linear.z;
+  // status.vel.z = msg.twist.twist.linear.z;
 }
 
 /********************************************************************************
