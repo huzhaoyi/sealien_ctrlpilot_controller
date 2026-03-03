@@ -173,7 +173,12 @@ typedef struct{
   double ref_alt; //参考高度，当使用IMU经纬度作为位置参考时使用，原点的高度/或者深度
   bool use_imu2navi; //是否使用IMU位置信息导航，0:不使用（使用定位模块的位置信息），1:使用
   uint8_t track_alt_depth; //路径跟踪完成后，进入位置保持模式，是定高还是定深，0:定深，1:定高
+  bool pos_use_brake;  //位置控制时，是否使用刹车功能（x,y方向），用于到达位置时快速减速，
+  double brake_pos_threshold; //进入刹车时的位置误差阈值，m
+  double brake_vel_threshold; //进入刹车时的速度阈值m/s
+  double brake_kcoef;  //刹车时的比例系数
 }Cfg_t; 
+
 
 class CtrModeBase;
 
@@ -191,6 +196,7 @@ public:
   void position_controller_update(geometry_msgs::msg::Point& vel_output, float z_status);
   void attitude_controller_reset(void);
   void position_controller_reset(float z_status);
+  double brake(double pos_error, double cur_vel);
 
   void attitude_angle_pid(geometry_msgs::msg::Point& rate_desired, const geometry_msgs::msg::Point attitude_desired,
     const geometry_msgs::msg::Point attitude_actual);
@@ -241,7 +247,7 @@ public:
   geometry_msgs::msg::Point follow_target_pos; //跟踪的最终目标位置
   double follow_target_ang;//跟踪的最终目标角度
   bool follow_direct;  //跟踪的方向，0：前进，1：后退
-  bool got_follow_target;  //跟踪的方向，0：前进，1：后退
+  bool got_follow_target;  //跟踪的方向，0：前进，1：后退锁
 private:
   void controller_init();
   void attitude_controller_init(void);

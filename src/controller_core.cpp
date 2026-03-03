@@ -152,6 +152,10 @@ void Controller::controller_init(){
   this->declare_parameter<double>("ref_alt", DEFUALT_REF_ALT);
   this->declare_parameter<bool>("use_imu2navi", DEFUALT_USE_IMU2NAVI);
   this->declare_parameter<int>("track_alt_depth", DEFUALT_TRACK_ALT_DEPTH);
+  this->declare_parameter<bool>("pos_use_brake", false);
+  this->declare_parameter<double>("brake_pos_threshold", 0.05);
+  this->declare_parameter<double>("brake_vel_threshold", 0.05);
+  this->declare_parameter<double>("brake_kcoef", 3.0);
 
   config.dt = this->get_parameter("dt").as_double();
   config.yaw_gain = this->get_parameter("yaw_gain").as_double(); 
@@ -174,6 +178,10 @@ void Controller::controller_init(){
   config.x_max = this->get_parameter("x_max").as_double();
   config.y_min = this->get_parameter("y_min").as_double();
   config.y_max = this->get_parameter("y_max").as_double();
+  config.pos_use_brake = this->get_parameter("pos_use_brake").as_bool();
+  config.brake_pos_threshold = this->get_parameter("brake_pos_threshold").as_double();
+  config.brake_vel_threshold = this->get_parameter("brake_vel_threshold").as_double();
+  config.brake_kcoef = this->get_parameter("brake_kcoef").as_double();
 
 
   config.ref_alt = this->get_parameter("ref_alt").as_double();
@@ -1127,6 +1135,26 @@ void Controller::pointBaseLinkToOdom(geometry_msgs::msg::Point p_in,  geometry_m
   float yaw = status.angle.z/RAD2DEG;
   p_out.x = p_in.x * cos(yaw) - p_in.y * sin(yaw);
   p_out.y = p_in.x * sin(yaw) + p_in.y * cos(yaw);
+}
+
+/********************************************************************************
+ * @brief  :刹车
+ * @param  pos_error：位置误差
+ * @param  cur_vel：当前速度
+ * @return :刹车控制量
+ *********************************************************************************/
+double Controller::brake(double pos_error, double cur_vel){
+  double acc_cmd;
+  if(config.pos_use_brake == false){
+    return 0.0;
+  }
+  if(fabs(pos_error) < config.brake_pos_threshold && fabs(cur_vel)>config.brake_vel_threshold){
+    acc_cmd = config.brake_kcoef *cur_vel;
+  }else{
+    acc_cmd = 0;
+  }
+  acc_cmd = acc_cmd > 1.0? 1.0:(acc_cmd<-1.0? -1.0:acc_cmd);   //限幅
+  return acc_cmd;
 }
 
 } //end namespace ControllerNS

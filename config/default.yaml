@@ -42,6 +42,10 @@ controller:
     use_rollpitch_ctrl: false #是否使用俯仰滚转角控制，0:不使用，1:使用
     use_imu2navi: false #是否使用IMU位置信息导航，0:不使用（使用定位模块的位置信息），1:使用
     track_alt_depth: 0  #路径跟踪完成后，进入位置保持模式，是定高还是定深，0:定深，1:定高
+    pos_use_brake: false  #位置控制时，是否使用刹车功能（x,y方向），用于到达位置时快速减速，
+    brake_pos_threshold: 0.05  #进入刹车时的位置误差阈值，m
+    brake_vel_threshold: 0.05  #进入刹车时的速度阈值m/s
+    brake_kcoef: 3.0  #刹车时的比例系数，
 
     angle_roll_pid_P: 0.01 #roll P
     angle_roll_pid_I: 0.01 #roll I

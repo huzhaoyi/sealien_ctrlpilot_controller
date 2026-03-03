@@ -241,8 +241,13 @@ void PilotAutoHold1::reset(void){
 };
 
 void PilotAutoHold1::output(void){
-  controller_->output.x = vel_output.x;
-  controller_->output.y = vel_output.y;
+  double posx_error = controller_->pos_target.x - controller_->status.pos.x;
+  double curx_vel = controller_->status.vel.x;
+  double posy_error = controller_->pos_target.y - controller_->status.pos.y;
+  double cury_vel = controller_->status.vel.y;
+
+  controller_->output.x = vel_output.x + controller_->brake(posx_error, curx_vel);
+  controller_->output.y = vel_output.y + controller_->brake(posy_error, cury_vel);
   controller_->output.z = vel_output.z;
 
   controller_->output.roll = rate_output.x;
@@ -290,8 +295,13 @@ void PilotAutoHold2::reset(void){
 };
 
 void PilotAutoHold2::output(void){
-  controller_->output.x = vel_output.x;
-  controller_->output.y = vel_output.y;
+  double posx_error = controller_->pos_target.x - controller_->status.pos.x;
+  double curx_vel = controller_->status.vel.x;
+  double posy_error = controller_->pos_target.y - controller_->status.pos.y;
+  double cury_vel = controller_->status.vel.y;
+
+  controller_->output.x = vel_output.x + controller_->brake(posx_error, curx_vel);
+  controller_->output.y = vel_output.y + controller_->brake(posy_error, cury_vel);;
   controller_->output.z = vel_output.z;
 
   controller_->output.roll = rate_output.x;
