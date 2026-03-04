@@ -10,12 +10,28 @@
 - 5）PIOLT_MODE_AUTODEPTH      = 4,   //定深模式
 - 6）PIOLT_MODE_AUTODHIGHT     = 5,   //定高
 - 7）PIOLT_MODE_AUTODIRCETION  = 6,
+- 8) PILOT_MODE_AUTOHOLD1      = 7,    //x、y、z位置保持,z轴是定深
+- 9) PILOT_MODE_AUTOHOLD2      = 8,    //x、y、z位置保持,z轴是定高
+- 10) PILOT_MODE_MISSION       = 9     //路径跟踪
+
 
 ### 2.订阅话题
 - /obc/twist_cmd  --> 订阅控制指令。
 - /sealien_mavros/imu --> 订阅状态数据。
 - /sealien_mavros/depthFinder --> 订阅深度数据。
 - /sealien_mavros/heightStatus    --> 订阅高度数据。
+
+- /msg_adapter/depth/pose: geometry_msgs/msg/PoseWithCovarianceStamped  #深度计读数，只使用z方向，其他方向无效
+- /msg_adapter/dvl/twist: geometry_msgs/msg/TwistWithCovarianceStamped  #dvl读数，只使用线速度
+- /msg_adapter/imu/twist: geometry_msgs/msg/Twist                       #imu的速度信息，当没有dvl时使用，参数配置
+- /msg_adapter/imuPose: geometry_msgs/msg/PoseStamped                   #IMU输出的位置信息，备用，当使用一体的DVL+IMU定位时，使用给消息的位置信息
+- /msg_adapter/imu_data: sensor_msgs/msg/Imu                            #IMU的角速度和加速度数据
+- /msg_adapter/sonar/pose: geometry_msgs/msg/PoseWithCovarianceStamped  #声呐读数，高度控制时使用，只使用Z轴
+- /obc/twist_cmd: sealien_ctrlpilot_msgmanagement/msg/TwistCmd           #订阅控制指令,由遥控器发出
+- /odometry/filtered: nav_msgs/msg/Odometry                             #定位模块输出的定位信息，目前是xy方向（即2D），使用x\y的位置和速度
+- /pure_pursuit_node/follow_cmd: sealien_ctrlpilot_msgmanagement/msg/FollowCmd  #路径跟踪输出，包括控制指令和一些状态
+- /pure_pursuit_node/path_track_status: std_msgs/msg/Bool               #路径跟踪状态，给控制模块使用，0：当前没有路径或者跟踪结束，1：正在跟踪
+
 
 ### 3.发布话题
 
