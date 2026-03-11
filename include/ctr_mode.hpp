@@ -34,6 +34,7 @@ public:
   virtual void update(void) = 0;
   virtual void reset(void) = 0;
   virtual void output(void) = 0;
+  float get_height(void);
 };
 
 

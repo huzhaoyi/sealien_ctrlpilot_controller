@@ -12,6 +12,20 @@
 
 namespace ControllerNS{
 
+float CtrModeBase::get_height(void){
+  float height = 0.0;
+  if(controller_->config.alt_source == HEIGHT_FROM_SONAR){// 高度数据来源于测距声呐
+    height = controller_->status.sonar_height;
+  }else if(controller_->config.alt_source == HEIGHT_FROM_DVL){// 高度数据来源于DVL
+    height = controller_->status.dvl_alt;
+  }else if(controller_->config.alt_source == HEIGHT_FROM_IMU){// 高度数据来源于IMU
+    height = controller_->status.imu_alt;
+  }else{
+    height = 0.0;
+  }
+  return height;
+};
+
 /****************NONE模式*******************/
 void PilotNone::setpoint_mapping(void){
  //do nothing
@@ -100,16 +114,7 @@ void PilotStablize2::setpoint_mapping(void){
 void PilotStablize2::update(void){
   controller_->attitude_controller_update(rate_output);
 
-  float height;
-  if(controller_->config.alt_source == HEIGHT_FROM_SONAR){// 高度数据来源于测距声呐
-    height = controller_->status.sonar_height;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_DVL){// 高度数据来源于DVL
-    height = controller_->status.dvl_alt;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_IMU){// 高度数据来源于IMU
-    height = controller_->status.imu_alt;
-  }else{
-    height = 0.0;
-  }
+  float height = get_height();
 
   controller_->position_controller_update(vel_output, height);
 };
@@ -117,17 +122,7 @@ void PilotStablize2::update(void){
 void PilotStablize2::reset(void){
   controller_->attitude_controller_reset();
 
-  float height;
-  if(controller_->config.alt_source == HEIGHT_FROM_SONAR){// 高度数据来源于测距声呐
-    height = controller_->status.sonar_height;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_DVL){// 高度数据来源于DVL
-    height = controller_->status.dvl_alt;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_IMU){// 高度数据来源于IMU
-    height = controller_->status.imu_alt;
-  }else{
-    height = 0.0;
-  }
-
+  float height = get_height();;
   controller_->position_controller_reset(height);
 };
 
@@ -176,17 +171,7 @@ void PilotAutoheight::update(void){
 };
 
 void PilotAutoheight::reset(void){
-  float height;
-  if(controller_->config.alt_source == HEIGHT_FROM_SONAR){// 高度数据来源于测距声呐
-    height = controller_->status.sonar_height;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_DVL){// 高度数据来源于DVL
-    height = controller_->status.dvl_alt;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_IMU){// 高度数据来源于IMU
-    height = controller_->status.imu_alt;
-  }else{
-    height = 0.0;
-  }
-
+  float height = get_height();;
   controller_->position_controller_reset(height);
 };
 
@@ -265,32 +250,16 @@ void PilotAutoHold2::setpoint_mapping(void){
 void PilotAutoHold2::update(void){
   controller_->attitude_controller_update(rate_output);
 
-  float height;
-  if(controller_->config.alt_source == HEIGHT_FROM_SONAR){// 高度数据来源于测距声呐
-    height = controller_->status.sonar_height;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_DVL){// 高度数据来源于DVL
-    height = controller_->status.dvl_alt;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_IMU){// 高度数据来源于IMU
-    height = controller_->status.imu_alt;
-  }else{
-    height = 0.0;
-  }
+  float height = get_height();;
+
   controller_->position_controller_update(vel_output, height);
 }
 
 void PilotAutoHold2::reset(void){
   controller_->attitude_controller_reset();
 
-  float height;
-  if(controller_->config.alt_source == HEIGHT_FROM_SONAR){// 高度数据来源于测距声呐
-    height = controller_->status.sonar_height;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_DVL){// 高度数据来源于DVL
-    height = controller_->status.dvl_alt;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_IMU){// 高度数据来源于IMU
-    height = controller_->status.imu_alt;
-  }else{
-    height = 0.0;
-  }
+  float height = get_height();
+ 
   controller_->position_controller_reset(height);
 };
 
@@ -343,15 +312,7 @@ void PilotMission::update(void){
     if(!controller_->config.track_alt_depth){
       height = controller_->status.depth;
     }else{
-      if(controller_->config.alt_source == HEIGHT_FROM_SONAR){// 高度数据来源于测距声呐
-        height = controller_->status.sonar_height;
-      }else if(controller_->config.alt_source == HEIGHT_FROM_DVL){// 高度数据来源于DVL
-        height = controller_->status.dvl_alt;
-      }else if(controller_->config.alt_source == HEIGHT_FROM_IMU){// 高度数据来源于IMU
-        height = controller_->status.imu_alt;
-      }else{
-        height = 0.0;
-      }
+      height = get_height();
     }
 
     controller_->position_controller_update(vel_output, height);
@@ -365,31 +326,27 @@ void PilotMission::reset(void){
   if(!controller_->config.track_alt_depth){
     controller_->position_controller_reset(controller_->status.depth);
   }else{
-    float height;
-    if(controller_->config.alt_source == HEIGHT_FROM_SONAR){// 高度数据来源于测距声呐
-      height = controller_->status.sonar_height;
-    }else if(controller_->config.alt_source == HEIGHT_FROM_DVL){// 高度数据来源于DVL
-      height = controller_->status.dvl_alt;
-    }else if(controller_->config.alt_source == HEIGHT_FROM_IMU){// 高度数据来源于IMU
-      height = controller_->status.imu_alt;
-    }else{
-      height = 0.0;
-    }
+    float height = get_height();
     controller_->position_controller_reset(height);
   }
 
   if(controller_->status.track_status == false){  //从跟踪状态到非跟踪状态
     RCLCPP_INFO(controller_->get_logger(), "path controller_->got_follow_target[%d]",controller_->got_follow_target);
-    if(controller_->got_follow_target == false){  //没有路径
+    if(controller_->got_follow_target == false){  //之前没有有效路径，那进入定位模式的目标点等于进入时的位置角度
+      controller_->angle_target.x = 0.0;
+      controller_->angle_target.y = 0.0;
       controller_->angle_target.z = controller_->status.yaw_base;
       controller_->pos_target.x = controller_->x_target_base;
       controller_->pos_target.y = controller_->y_target_base;
       RCLCPP_INFO(controller_->get_logger(), "path track  false");
-    }else{//有路径
+    }else{//如果之前有有效路径，说明跟踪完成，则目标点是路径最后一点
       controller_->pos_target.x = controller_->follow_target_pos.x;
       controller_->pos_target.y = controller_->follow_target_pos.y;
+
+      controller_->angle_target.x = 0.0;
+      controller_->angle_target.y = 0.0;
       
-      if(controller_->follow_direct){
+      if(controller_->follow_direct){  //倒退时，目标角度与实际角度相差180°
         controller_->angle_target.z = controller_->follow_target_ang + 180;
         controller_->angle_target.z = controller_->angle_target.z>180? (controller_->angle_target.z-360):controller_->angle_target.z;
       }else{
