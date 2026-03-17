@@ -66,8 +66,12 @@ Controller::Controller(std::string node_name):Node(node_name){
   imu_twist_subscriber =  this->create_subscription<geometry_msgs::msg::Twist>(
     "/msg_adapter/imu/twist", 10, std::bind(&Controller::imu_twist_callback, this, _1));       //订阅imu速度
 
+  taskPosCmd_subscriber =  this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd>(
+    "/task/pose_cmd", 10, std::bind(&Controller::taskPoseCmd_callback, this, _1));       //订阅任务
+
   target_angle_publisher  = this->create_publisher<geometry_msgs::msg::Point>("~/target_angle", 10);
   target_pos_publisher    = this->create_publisher<geometry_msgs::msg::Point>("~/target_pos", 10);
+  task_finish_publisher   = this->create_publisher<std_msgs::msg::Bool>("/task_finish", 10);
   // test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
 
 #if PUB_THRUSTER
@@ -238,6 +242,7 @@ void Controller::controller_init(){
   status.angle_add = 0.0;
 
   got_follow_target = false;  //是否获得跟踪目标；路径跟踪时使用
+  got_task_target = false;    //是否获得任务目标；任务模式时使用
 
   x_target_base   = 0.0;  //x轴位置基础值，切换到位置模式时置为当前值
   x_target_delta  = 0.0;  //x轴位置遥控器增量值，累加
@@ -604,8 +609,9 @@ void Controller::setpoint_mapping(void){
   target_pos_publisher->publish(pos_target);
 
  
-  if(twist_cmd.ctrl_mode != PILOT_MODE_MISSION){  //路径跟踪用
+  if(twist_cmd.ctrl_mode != PILOT_MODE_MISSION){  //不是任务模式，置false,路径跟踪用
     got_follow_target = false;
+    got_task_target   = false;
   }
 }
 
@@ -818,6 +824,8 @@ void Controller::attitude_angle_pid(geometry_msgs::msg::Point& rate_desired, con
   rate_desired.z = pid_angle_yaw.pid_update(yaw_error);
 
   // RCLCPP_INFO(this->get_logger(), "pitch_error[%f],rate_desired.y[%f]",pitch_error, rate_desired.y);
+  // RCLCPP_INFO(this->get_logger(), "attitude_desired.z[%f], attitude_actual.z[%f]",attitude_desired.z, attitude_actual.z);
+  // RCLCPP_INFO(this->get_logger(), "yaw_error[%f], rate_desired.z[%f]",yaw_error, rate_desired.z);
 }
 
 /********************************************************************************
@@ -885,7 +893,7 @@ void Controller::position_pos_pid(geometry_msgs::msg::Point& vel_desired, const 
 
   float x_error = pout.x;
   float y_error = pout.y;
-  float z_error = -pos_desired.z + pos_actual.z;
+  float z_error = pos_desired.z - pos_actual.z;
 
   //死区处理，也是控制精度处理
   x_error = DEADZONE(x_error, -0.5*config.ctrl_accuracy, 0.5*config.ctrl_accuracy);
@@ -895,10 +903,8 @@ void Controller::position_pos_pid(geometry_msgs::msg::Point& vel_desired, const 
   vel_desired.x = pid_x.pid_update(x_error);
   vel_desired.y = pid_y.pid_update(y_error);
   vel_desired.z = pid_z.pid_update(z_error);
-  // RCLCPP_INFO(this->get_logger(), "vel_desired.z[%f]",vel_desired.z);
-  // std_msgs::msg::Float32 test;
-  // test.data = vel_desired.x;
-  // test_publisher->publish(test);
+  // RCLCPP_INFO(this->get_logger(), "vel_desired.x[%f]",vel_desired.x);
+  // RCLCPP_INFO(this->get_logger(), "x_error[%f], ",x_error);
 }
 
 /********************************************************************************
@@ -919,7 +925,7 @@ void Controller::position_velocity_pid(geometry_msgs::msg::Point& vel_output, co
   vel_output.x = -pid_vx.pid_update(x_vel_error);
   vel_output.y = -pid_vy.pid_update(y_vel_error);
   // Z
-  vel_output.z = pid_vz.pid_update(z_vel_error);
+  vel_output.z = -pid_vz.pid_update(z_vel_error);
 
 }
 
@@ -1023,6 +1029,8 @@ void Controller::PathTrackStatus_callback(const std_msgs::msg::Bool& msg){
 }
 
 void Controller::imu_twist_callback(const geometry_msgs::msg::Twist& msg){
+  status.vel.z = msg.linear.z;
+
   if(twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD1 ||  //位置保持模式速度使用dvl速度，非位置保持模式使用imu速度
      twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD2 ||
      twist_cmd.ctrl_mode == PILOT_MODE_MISSION ){
@@ -1032,7 +1040,6 @@ void Controller::imu_twist_callback(const geometry_msgs::msg::Twist& msg){
 
   status.vel.x = msg.linear.x;
   status.vel.y = msg.linear.y;
-  status.vel.z = msg.linear.z;
 }
 
 void Controller::trackCmd_callback(const msg_FollowCmd& msg){
@@ -1049,8 +1056,28 @@ void Controller::trackCmd_callback(const msg_FollowCmd& msg){
     follow_target_ang = msg.angle_deg;
     follow_direct = msg.dir;  //跟踪的方向，0：前进，1：后退
     got_follow_target = true;
+    got_task_target   = true;
   }
   
+}
+
+void Controller::taskPoseCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd& msg){
+  if(twist_cmd.ctrl_mode != PILOT_MODE_MISSION){  //不是在任务模式下，忽略任务的位置指令
+    return;
+  }
+
+  pos_target.x = msg.x;
+  pos_target.y = msg.y;
+  pos_target.z = msg.z;
+
+  angle_target.x = msg.roll;
+  angle_target.y = msg.pitch;
+  angle_target.z = msg.yaw;
+
+  got_task_target = true;   //标志获得任务
+
+  RCLCPP_INFO(this->get_logger(), "get task");
+
 }
 
 
@@ -1155,6 +1182,31 @@ double Controller::brake(double pos_error, double cur_vel){
   }
   acc_cmd = acc_cmd > 1.0? 1.0:(acc_cmd<-1.0? -1.0:acc_cmd);   //限幅
   return acc_cmd;
+}
+
+//判断任务是否执行完成，在任务模式时使用
+bool Controller::isTaskFinish(void){
+  double cur_dist = sqrt(pow(status.pos.x-pos_target.x, 2) + 
+                    pow(status.pos.y-pos_target.y, 2) +
+                    pow(status.pos.y-pos_target.y, 3));
+
+  bool vel_zero = (status.vel.x < 0.05) && (status.vel.y < 0.05) && (status.vel.z < 0.05);
+  bool rate_zero = (status.rate.x < 0.05) && (status.rate.y < 0.05) && (status.rate.z < 0.05);
+  bool delta_angle_zero = (fabs(angle_target.x - status.angle.x)<0.5) &&
+                          (fabs(angle_target.y - status.angle.y)<0.5) &&
+                          (fabs(angle_target.z - status.angle.z)<0.5) ;
+
+  if(cur_dist<0.2 && vel_zero && rate_zero && delta_angle_zero){
+    return true;
+  }
+
+  return false;
+}
+
+void Controller::TaskFinishPub(void){
+  std_msgs::msg::Bool Tfinish_status;
+  Tfinish_status.data = true;
+  task_finish_publisher->publish(Tfinish_status);
 }
 
 } //end namespace ControllerNS

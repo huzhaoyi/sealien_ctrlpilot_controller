@@ -317,12 +317,22 @@ void PilotMission::update(void){
 
     controller_->position_controller_update(vel_output, height);
 
+
+    if(controller_->got_task_target){  //任务在进行中，需要判断任务是否完成
+      if(controller_->isTaskFinish()){
+        controller_->TaskFinishPub();
+        controller_->got_task_target = false;
+      }
+    }
+
     // RCLCPP_INFO(controller_->get_logger(), "pos hold");
   }
 }
 
 void PilotMission::reset(void){
   controller_->attitude_controller_reset();
+
+  //垂向位置是定深还是定高，如果是定高，确定高度来源
   if(!controller_->config.track_alt_depth){
     controller_->position_controller_reset(controller_->status.depth);
   }else{

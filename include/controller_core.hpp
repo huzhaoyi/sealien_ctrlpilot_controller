@@ -26,6 +26,7 @@
 #include "sealien_ctrlpilot_msgmanagement/msg/depth_status.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/sonar_altimeter_status.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/thruster_cmd.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/task_pos_cmd.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/follow_cmd.hpp"
@@ -197,6 +198,8 @@ public:
   void attitude_controller_reset(void);
   void position_controller_reset(float z_status);
   double brake(double pos_error, double cur_vel);
+  bool isTaskFinish(void);   //判断任务是否完成
+  void TaskFinishPub(void);   //判断任务是否完成
 
   void attitude_angle_pid(geometry_msgs::msg::Point& rate_desired, const geometry_msgs::msg::Point attitude_desired,
     const geometry_msgs::msg::Point attitude_actual);
@@ -247,7 +250,8 @@ public:
   geometry_msgs::msg::Point follow_target_pos; //跟踪的最终目标位置
   double follow_target_ang;//跟踪的最终目标角度
   bool follow_direct;  //跟踪的方向，0：前进，1：后退
-  bool got_follow_target;  //跟踪的方向，0：前进，1：后退锁
+  bool got_follow_target;  //是否获取跟踪路径，路径跟踪时使用
+  bool got_task_target;   //是否获取任务，包括跟踪路径和跟踪目标点，在任务模式时使用。
 private:
   void controller_init();
   void attitude_controller_init(void);
@@ -277,6 +281,7 @@ private:
   void trackCmd_callback(const msg_FollowCmd& msg);
   void PathTrackStatus_callback(const std_msgs::msg::Bool& msg);
   void imu_twist_callback(const geometry_msgs::msg::Twist& msg);
+  void taskPoseCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd& msg);
 
   rclcpp::TimerBase::SharedPtr timer_cycle_20HZ;
   rclcpp::TimerBase::SharedPtr timer_cycle_10HZ;
@@ -287,6 +292,7 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::Point>::SharedPtr target_angle_publisher; 
   rclcpp::Publisher<geometry_msgs::msg::Point>::SharedPtr target_pos_publisher; 
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr test_publisher; 
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr task_finish_publisher; 
 
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>::SharedPtr TwistCmd_subscriber;      //订阅遥控指令
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr imuPos_subscriber;                //订阅状态数据
@@ -298,6 +304,8 @@ private:
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr pathTrackStatus_subscriber;    //订阅路径跟踪状态
   rclcpp::Subscription<msg_FollowCmd>::SharedPtr track_cmd_subscriber;   //订阅路径跟踪模块下发的速度
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr imu_twist_subscriber;  //订阅imu的速度
+  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd>::SharedPtr taskPosCmd_subscriber;  //订阅任务模块的指令
+
 
   // rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr control_output_publisher; 
   
