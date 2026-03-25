@@ -61,15 +61,15 @@ controller:
     rate_pitch_pid_I: 0.0 #pitch rate I
     rate_pitch_pid_D: 0.0 #pitch rate D  
 
-    angle_yaw_pid_P: 0.08 #航向角P
-    angle_yaw_pid_I: 0.02 #航向角I
+    angle_yaw_pid_P: 0.05 #航向角P
+    angle_yaw_pid_I: 0.01 #航向角I
     angle_yaw_pid_D: 0.024 #航向角 D       
-    rate_yaw_pid_P: 1.0 #航向角速度P
+    rate_yaw_pid_P: 0.5 #航向角速度P
     rate_yaw_pid_I: 0.01 #航向角速度I
     rate_yaw_pid_D: 0.0 #航向角速度D    
     
-    pos_x_pid_P: 0.8 #x轴位置P
-    pos_x_pid_I: 0.02 #x轴位置I
+    pos_x_pid_P: 0.5 #x轴位置P
+    pos_x_pid_I: 0.01 #x轴位置I
     pos_x_pid_D: 0.8 #x轴位置        
     vel_x_pid_P: 1.0 #x轴速度P
     vel_x_pid_I: 0.0 #x轴速度I
@@ -82,10 +82,10 @@ controller:
     vel_y_pid_I: 0.0 #y轴速度I
     vel_y_pid_D: 0.01 #y轴速度D
 
-    pos_z_pid_P: 5.5 #z轴位置P
-    pos_z_pid_I: 0.5 #z轴位置I
+    pos_z_pid_P: 2.5 #z轴位置P
+    pos_z_pid_I: 0.1 #z轴位置I
     pos_z_pid_D: 0.8 #z轴位置        
-    vel_z_pid_P: 2.0 #z轴速度P
+    vel_z_pid_P: 0.8 #z轴速度P
     vel_z_pid_I: 0.1 #z轴速度I
     vel_z_pid_D: 0.0 #z轴速度D
 
