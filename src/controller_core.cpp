@@ -115,7 +115,19 @@ void Controller::timer_1HZ_callback(){
  * @return :NONE
  *********************************************************************************/
 void Controller::Run(){
-  if(status.get_status){  //只有获取状态量后才开始计算
+  if(!init_flag.isInitFinish){
+    if(init_flag.isPosCtrl){
+      if(init_flag.posCount <= 0){
+        init_flag.isInitFinish = true;
+      }
+
+    }else{
+      init_flag.isInitFinish = true;
+    }
+  }
+
+
+  if(status.get_status && init_flag.isInitFinish){  //只有获取状态量后才开始计算
     setpoint_mapping();  //遥控器数据处理
     controller_mode_sw();  //每次计算都要先判断控制模式，如果需要就切换
     controller_step();  //控制更新
@@ -265,6 +277,10 @@ void Controller::controller_init(){
 
   attitude_controller_init();   //姿态控制器初始化
   position_controller_init();   //位置控制器初始化
+
+  init_flag.isInitFinish = false;  //初始时置false，需要经过初始化
+  init_flag.isPosCtrl  = true;  //初始默认遥控器给的是位置控制
+  init_flag.posCount = 10;
 
   //实例化控制模式
   ModeMap[PILOT_MODE_NONE] = std::make_shared<PilotNone>(this);
@@ -949,6 +965,11 @@ void Controller::clear_output(void){
  * @return NONE
 *********************************************************************************/
 void Controller::TwistCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::TwistCmd& msg){
+  if(!init_flag.isInitFinish){
+    init_flag.isPosCtrl = isPosCtrlMode(msg.ctrl_mode);
+    return;
+  }
+
   twist_cmd.x = msg.x;
   twist_cmd.y = msg.y;
   twist_cmd.z = msg.z;
@@ -1087,6 +1108,11 @@ void Controller::odom_callback(const nav_msgs::msg::Odometry& msg){
     return;
   }
 
+  if(init_flag.posCount>0){
+    init_flag.posCount--;
+  }
+  
+
   double roll, pitch, yaw;
   // 使用tf2进行转换
   tf2::Quaternion tf_quat;
@@ -1207,6 +1233,14 @@ void Controller::TaskFinishPub(void){
   std_msgs::msg::Bool Tfinish_status;
   Tfinish_status.data = true;
   task_finish_publisher->publish(Tfinish_status);
+}
+
+bool Controller::isPosCtrlMode(int ctrlmod){ //判断是否是未知控制
+  if(ctrlmod == PILOT_MODE_AUTOHOLD1 || ctrlmod == PILOT_MODE_AUTOHOLD2 || ctrlmod == PILOT_MODE_MISSION){
+    return true;
+  }else{
+    return false;
+  }
 }
 
 } //end namespace ControllerNS

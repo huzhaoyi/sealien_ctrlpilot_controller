@@ -135,6 +135,13 @@ typedef struct{
   float yaw;    //航向指令
 }Mtwist_t;
 
+class Init_flag{
+public:
+  bool isInitFinish;  //是否初始化完成，如果一开始是位置模式，需要等待位置消息，防止一开机就跑飞
+  bool isPosCtrl;  //是否是位置控制
+  int posCount;  //位置消息忽略数量，防止一开始的位置不准
+};
+
 typedef struct{
   geometry_msgs::msg::Point angle;   //角度
   geometry_msgs::msg::Point rate;    //角速度
@@ -200,6 +207,7 @@ public:
   double brake(double pos_error, double cur_vel);
   bool isTaskFinish(void);   //判断任务是否完成
   void TaskFinishPub(void);   //判断任务是否完成
+  bool isPosCtrlMode(int ctrlmod);
 
   void attitude_angle_pid(geometry_msgs::msg::Point& rate_desired, const geometry_msgs::msg::Point attitude_desired,
     const geometry_msgs::msg::Point attitude_actual);
@@ -252,6 +260,7 @@ public:
   bool follow_direct;  //跟踪的方向，0：前进，1：后退
   bool got_follow_target;  //是否获取跟踪路径，路径跟踪时使用
   bool got_task_target;   //是否获取任务，包括跟踪路径和跟踪目标点，在任务模式时使用。
+  Init_flag init_flag;
 private:
   void controller_init();
   void attitude_controller_init(void);
