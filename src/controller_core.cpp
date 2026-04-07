@@ -119,6 +119,8 @@ void Controller::Run(){
     if(init_flag.isPosCtrl){
       if(init_flag.posCount <= 0){
         init_flag.isInitFinish = true;
+        attitude_controller_reset();
+        position_controller_reset(status.depth);
       }
 
     }else{
@@ -1111,7 +1113,7 @@ void Controller::odom_callback(const nav_msgs::msg::Odometry& msg){
   if(init_flag.posCount>0){
     init_flag.posCount--;
   }
-  
+
 
   double roll, pitch, yaw;
   // 使用tf2进行转换
