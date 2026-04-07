@@ -18,9 +18,9 @@ controller:
     vel_x_integration_limit: 1.0 #x轴速度积分限幅
     vel_y_integration_limit: 1.0 #y轴速度积分限幅
     vel_z_integration_limit: 1.0 #z轴速度积分限幅       
-    pos_x_output_limit: 1.0 #x轴位置PID输出限幅
-    pos_y_output_limit: 1.0 #y轴位置PID输出限幅
-    pos_z_output_limit: 1.0 #z轴位置PID输出限幅     
+    pos_x_output_limit: 3.0 #x轴位置PID输出限幅
+    pos_y_output_limit: 3.0 #y轴位置PID输出限幅
+    pos_z_output_limit: 2.0 #z轴位置PID输出限幅     
     vel_x_output_limit: 1.0 #x轴速度PID输出限幅
     vel_y_output_limit: 1.0 #y轴速度PID输出限幅
     vel_z_output_limit: 1.0 #z轴速度PID输出限幅
@@ -28,10 +28,10 @@ controller:
     height_min: 0.0 #高度最小值，由高度计决定
     height_max: 20.0 #高度最大值，由高度计决定
     ctrl_accuracy: 0.00 #控制精度，单位m
-    dt: 0.05 #控制周期0.05S(20HZ)，非必要不修改
+    dt: 0.02 #控制周期0.05S(20HZ)，非必要不修改
     yaw_gain: 1.0 #航向遥控器增益
-    z_gain: 0.02 #垂向遥控器增益
-    xy_gain: 0.02 #垂向遥控器增益
+    z_gain: 0.03 #垂向遥控器增益
+    xy_gain: 0.03 #垂向遥控器增益
     yaw_limit: 180.0 #定向模式时，角度限幅，范围是正负，单位是（°）
     depth_min: -300.0 #深度最小值，向下为负
     depth_max: 0.0 #深度最大值，向下为 
@@ -68,24 +68,24 @@ controller:
     rate_yaw_pid_I: 0.01 #航向角速度I
     rate_yaw_pid_D: 0.0 #航向角速度D    
     
-    pos_x_pid_P: 0.5 #x轴位置P
-    pos_x_pid_I: 0.01 #x轴位置I
-    pos_x_pid_D: 0.8 #x轴位置        
+    pos_x_pid_P: 1.8 #x轴位置P
+    pos_x_pid_I: 0.0 #x轴位置I
+    pos_x_pid_D: 0.0 #x轴位置        
     vel_x_pid_P: 1.0 #x轴速度P
     vel_x_pid_I: 0.0 #x轴速度I
-    vel_x_pid_D: 0.01 #x轴速度D
+    vel_x_pid_D: 0.0 #x轴速度D
 
-    pos_y_pid_P: 0.8 #y轴位置P
-    pos_y_pid_I: 0.02 #y轴位置I
-    pos_y_pid_D: 0.8 #y轴位置        
+    pos_y_pid_P: 1.8 #y轴位置P
+    pos_y_pid_I: 0.0 #y轴位置I
+    pos_y_pid_D: 0.0 #y轴位置        
     vel_y_pid_P: 1.0 #y轴速度P
     vel_y_pid_I: 0.0 #y轴速度I
-    vel_y_pid_D: 0.01 #y轴速度D
+    vel_y_pid_D: 0.0 #y轴速度D
 
     pos_z_pid_P: 2.5 #z轴位置P
     pos_z_pid_I: 0.1 #z轴位置I
-    pos_z_pid_D: 0.8 #z轴位置        
-    vel_z_pid_P: 0.8 #z轴速度P
-    vel_z_pid_I: 0.1 #z轴速度I
+    pos_z_pid_D: 0.0 #z轴位置        
+    vel_z_pid_P: 1.0 #z轴速度P
+    vel_z_pid_I: 0.0 #z轴速度I
     vel_z_pid_D: 0.0 #z轴速度D
 

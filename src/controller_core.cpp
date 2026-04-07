@@ -687,17 +687,17 @@ void Controller::process_z_setpoint(void){
  *********************************************************************************/
 void Controller::process_xy_setpoint(void){
   geometry_msgs::msg::Point p_in, p_out;
-  x_target_delta -= config.xy_gain * twist_cmd.x;
-  y_target_delta -= config.xy_gain * twist_cmd.y;
-
-  p_in.x = x_target_delta;
-  p_in.y = y_target_delta;
+  p_in.x = config.xy_gain * twist_cmd.x;
+  p_in.y = config.xy_gain * twist_cmd.y;
 
   pointBaseLinkToOdom(p_in, p_out);  
 
+  x_target_delta -=  p_out.x;
+  y_target_delta -=  p_out.y;
 
-  pos_target.x = x_target_base + p_out.x;
-  pos_target.y = y_target_base + p_out.y;
+  pos_target.x = x_target_base + x_target_delta;
+  pos_target.y = y_target_base + y_target_delta;
+
 
   pos_target.x = LIMIT(pos_target.x, config.x_min, config.x_max);
   pos_target.y = LIMIT(pos_target.y, config.y_min, config.y_max);
@@ -889,6 +889,7 @@ void Controller::position_controller_update(geometry_msgs::msg::Point& vel_outpu
 
 
   position_pos_pid(vel_desired, pos_desired, status.pos);
+
   position_velocity_pid(vel_output, vel_desired, status.vel);
   
   vel_output.z = config.thrust_base + vel_output.z;
@@ -908,6 +909,11 @@ void Controller::position_pos_pid(geometry_msgs::msg::Point& vel_desired, const 
   pint.x = pos_desired.x - pos_actual.x;
   pint.y = pos_desired.y - pos_actual.y;
   pointOdomToBaseLink(pint, pout);
+
+  //限制位置误差值
+  pout.x = LIMIT(pout.x, -2, 2);
+  pout.y = LIMIT(pout.y, -2, 2);
+  pout.z = LIMIT(pout.z, -2, 2);
 
   float x_error = pout.x;
   float y_error = pout.y;
