@@ -72,7 +72,7 @@ Controller::Controller(std::string node_name):Node(node_name){
   target_angle_publisher  = this->create_publisher<geometry_msgs::msg::Point>("~/target_angle", 10);
   target_pos_publisher    = this->create_publisher<geometry_msgs::msg::Point>("~/target_pos", 10);
   task_finish_publisher   = this->create_publisher<std_msgs::msg::Bool>("/task_finish", 10);
-  // test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
+  test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
 
 #if PUB_THRUSTER
   thru_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCmd>("~/thruster_cmd", 10); 
@@ -829,18 +829,30 @@ void Controller::attitude_angle_pid(geometry_msgs::msg::Point& rate_desired, con
   float pitch_error = attitude_desired.y - attitude_actual.y;
   float yaw_error   = attitude_desired.z - attitude_actual.z;
 
+
+  //规范到±180度范围
+  yaw_error = NORMALIZE_YAW(yaw_error);
+  yaw_error = LIMIT(yaw_error, -30, 30);
+
+  roll_error = LIMIT(roll_error, -30, 30);
+
+  pitch_error = LIMIT(pitch_error, -30, 30);
+
   if(config.use_rollpitch_ctrl){ //使用俯仰滚转角控制
-    rate_desired.x = -pid_angle_roll.pid_update(roll_error);
-    rate_desired.y = -pid_angle_pitch.pid_update(pitch_error);
+    rate_desired.x = pid_angle_roll.pid_update(roll_error);
+    rate_desired.y = pid_angle_pitch.pid_update(pitch_error);
   }else{//不使用俯仰滚转角控制
     rate_desired.x = 0.0;
     rate_desired.y = 0.0;
   }
 
-  //规范到±180度范围
-  yaw_error = NORMALIZE_YAW(yaw_error);
+
   rate_desired.z = pid_angle_yaw.pid_update(yaw_error);
 
+  std_msgs::msg::Float32 rate_pub;
+  rate_pub.data = rate_desired.z;
+
+  test_publisher->publish(rate_pub);
   // RCLCPP_INFO(this->get_logger(), "pitch_error[%f],rate_desired.y[%f]",pitch_error, rate_desired.y);
   // RCLCPP_INFO(this->get_logger(), "attitude_desired.z[%f], attitude_actual.z[%f]",attitude_desired.z, attitude_actual.z);
   // RCLCPP_INFO(this->get_logger(), "yaw_error[%f], rate_desired.z[%f]",yaw_error, rate_desired.z);
