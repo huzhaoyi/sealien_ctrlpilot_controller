@@ -39,23 +39,14 @@ Controller::Controller(std::string node_name):Node(node_name){
   TwistCmd_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>(
     "/obc/twist_cmd", 10, std::bind(&Controller::TwistCmd_callback, this, _1));       //订阅控制指令
 
-  imuPos_subscriber = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-    "/msg_adapter/imuPose", 10, std::bind(&Controller::ImuPos_callback, this, _1));       //订阅状态数据
-
-  imuData_subscriber = this->create_subscription<sensor_msgs::msg::Imu>(
-    "/msg_adapter/imu_data", 10, std::bind(&Controller::ImuData_callback, this, _1));       //订阅状态数据
-
-  dvl_subscriber = this->create_subscription<geometry_msgs::msg::TwistWithCovarianceStamped>(
-    "/msg_adapter/dvl/twist", 10, std::bind(&Controller::Dvl_callback, this, _1));       //订阅状态数据
-
-  depth_subscriber = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "/msg_adapter/depth/pose", 10, std::bind(&Controller::Depth_callback, this, _1));       //订阅深度数据
+  imuOdom_subscriber = this->create_subscription<nav_msgs::msg::Odometry>(
+    "/msg_adapter/imu_odom", 10, std::bind(&Controller::ImuOdom_callback, this, _1));       //订阅状态数据
 
   height_subscriber = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
     "/msg_adapter/sonar/pose", 10, std::bind(&Controller::Height_callback, this, _1));       //订阅高度数据
 
   odom_subscriber = this->create_subscription<nav_msgs::msg::Odometry>("/odometry/filtered", 10,
-    std::bind(&Controller::odom_callback, this, _1));       //订阅重置参考点指令
+    std::bind(&Controller::LocateOdom_callback, this, _1));       //订阅重置参考点指令
 
   track_cmd_subscriber = this->create_subscription<msg_FollowCmd>("/pure_pursuit_node/follow_cmd", 10,
     std::bind(&Controller::trackCmd_callback, this, _1));       //订阅重置参考点指令
@@ -63,13 +54,10 @@ Controller::Controller(std::string node_name):Node(node_name){
   pathTrackStatus_subscriber =  this->create_subscription<std_msgs::msg::Bool>(
     "/pure_pursuit_node/path_track_status", 10, std::bind(&Controller::PathTrackStatus_callback, this, _1));       //订阅路径跟踪状态
 
-  imu_twist_subscriber =  this->create_subscription<geometry_msgs::msg::Twist>(
-    "/msg_adapter/imu/twist", 10, std::bind(&Controller::imu_twist_callback, this, _1));       //订阅imu速度
-
   taskPosCmd_subscriber =  this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd>(
     "/task/pose_cmd", 10, std::bind(&Controller::taskPoseCmd_callback, this, _1));       //订阅任务
 
-  target_angle_publisher  = this->create_publisher<geometry_msgs::msg::Point>("~/target_angle", 10);
+  target_angle_publisher  = this->create_publisher<geometry_msgs::msg::Point>("~/target_angle_deg", 10);
   target_pos_publisher    = this->create_publisher<geometry_msgs::msg::Point>("~/target_pos", 10);
   task_finish_publisher   = this->create_publisher<std_msgs::msg::Bool>("/task_finish", 10);
   test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
@@ -120,7 +108,7 @@ void Controller::Run(){
       if(init_flag.posCount <= 0){
         init_flag.isInitFinish = true;
         attitude_controller_reset();
-        position_controller_reset(status.depth);
+        position_controller_reset(status.pos.z);
       }
 
     }else{
@@ -160,20 +148,11 @@ void Controller::controller_init(){
   this->declare_parameter<double>("x_max", DEFUALT_X_MAN);
   this->declare_parameter<double>("y_min", DEFUALT_Y_MIN);
   this->declare_parameter<double>("y_max", DEFUALT_Y_MAN);
-  this->declare_parameter<int>("alt_source", DEFUALT_ALT_SOURCE);
   this->declare_parameter<double>("height_min", DEFUALT_ALT_MIN);
   this->declare_parameter<double>("height_max", DEFUALT_ALT_MAX);
   this->declare_parameter<double>("ctrl_accuracy", DEFUALT_ACCURACY);
   this->declare_parameter<bool>("use_rollpitch_ctrl", DEFUALT_USE_ROLLPITCH);
-  this->declare_parameter<double>("ref_lat", DEFUALT_REF_LAT);
-  this->declare_parameter<double>("ref_lon", DEFUALT_REF_LON);
-  this->declare_parameter<double>("ref_alt", DEFUALT_REF_ALT);
   this->declare_parameter<bool>("use_imu2navi", DEFUALT_USE_IMU2NAVI);
-  this->declare_parameter<int>("track_alt_depth", DEFUALT_TRACK_ALT_DEPTH);
-  this->declare_parameter<bool>("pos_use_brake", false);
-  this->declare_parameter<double>("brake_pos_threshold", 0.05);
-  this->declare_parameter<double>("brake_vel_threshold", 0.05);
-  this->declare_parameter<double>("brake_kcoef", 3.0);
 
   config.dt = this->get_parameter("dt").as_double();
   config.yaw_gain = this->get_parameter("yaw_gain").as_double(); 
@@ -182,30 +161,16 @@ void Controller::controller_init(){
   config.yaw_limit = this->get_parameter("yaw_limit").as_double(); 
   config.depth_min = this->get_parameter("depth_min").as_double(); 
   config.depth_max = this->get_parameter("depth_max").as_double(); 
-  config.alt_source = this->get_parameter("alt_source").as_int();
   config.height_min = this->get_parameter("height_min").as_double();
   config.height_max = this->get_parameter("height_max").as_double();
   config.ctrl_accuracy = this->get_parameter("ctrl_accuracy").as_double();
   config.use_rollpitch_ctrl = this->get_parameter("use_rollpitch_ctrl").as_bool();
   config.use_imu2navi = this->get_parameter("use_imu2navi").as_bool();
-  config.track_alt_depth = this->get_parameter("track_alt_depth").as_int();
 
-  config.ref_alt = this->get_parameter("ref_lat").as_double();
-  config.ref_lon = this->get_parameter("ref_lon").as_double();
   config.x_min = this->get_parameter("x_min").as_double();
   config.x_max = this->get_parameter("x_max").as_double();
   config.y_min = this->get_parameter("y_min").as_double();
   config.y_max = this->get_parameter("y_max").as_double();
-  config.pos_use_brake = this->get_parameter("pos_use_brake").as_bool();
-  config.brake_pos_threshold = this->get_parameter("brake_pos_threshold").as_double();
-  config.brake_vel_threshold = this->get_parameter("brake_vel_threshold").as_double();
-  config.brake_kcoef = this->get_parameter("brake_kcoef").as_double();
-
-
-  config.ref_alt = this->get_parameter("ref_alt").as_double();
-  
-  origin_ref.Reset(config.ref_alt, config.ref_lon, config.ref_alt);  //重置原点
-
   config.thrust_base = DEFUALT_THRUST_BASE;
 
 #if PRINT_PARAMS
@@ -215,25 +180,19 @@ void Controller::controller_init(){
   RCLCPP_INFO(this->get_logger(), "yaw_limit[%f]", config.yaw_limit);
   RCLCPP_INFO(this->get_logger(), "depth_min[%f]", config.depth_min);
   RCLCPP_INFO(this->get_logger(), "depth_max[%f]", config.depth_max);
-  RCLCPP_INFO(this->get_logger(), "alt_source[%d]", config.alt_source);
   RCLCPP_INFO(this->get_logger(), "height_min[%f]", config.height_min);
   RCLCPP_INFO(this->get_logger(), "height_max[%f]", config.height_max);
   RCLCPP_INFO(this->get_logger(), "ctrl_accuracy[%f]", config.ctrl_accuracy);
   RCLCPP_INFO(this->get_logger(), "use_rollpitch_ctrl[%d]", config.use_rollpitch_ctrl);
-  RCLCPP_INFO(this->get_logger(), "ref_lat[%lf]", config.ref_alt);
-  RCLCPP_INFO(this->get_logger(), "ref_lon[%lf]", config.ref_lon);
-  RCLCPP_INFO(this->get_logger(), "ref_alt[%lf]", config.ref_alt);
 #endif
 
   have_new_track_status = false;
 
   twist_cmd.ctrl_mode   = DEFUALT_PILOT_MODE;  //初始控制模式
   twist_cmd.lock_status = DEFUALT_LOCK_STATUS; //默认上锁
-  status.get_status = 0; //未获得状态量
+  status.get_status = false; //未获得状态量
   status.yaw_base   = DEFUALT_YAW_BASE; //给定一个很大的基准航向，即不限制航向角
-  status.sonar_height = 0;
-  status.depth = 0;
-  status.dvl_alt = 0;
+  status.alt = 0;
 
   status.angle.x = 0;
   status.angle.y = 0;
@@ -294,7 +253,8 @@ void Controller::controller_init(){
   ModeMap[PILOT_MODE_AUTODIRCETION] = std::make_shared<PilotAutoDirection>(this);
   ModeMap[PILOT_MODE_AUTOHOLD1] = std::make_shared<PilotAutoHold1>(this);
   ModeMap[PILOT_MODE_AUTOHOLD2] = std::make_shared<PilotAutoHold2>(this);
-  ModeMap[PILOT_MODE_MISSION] = std::make_shared<PilotMission>(this);
+  ModeMap[PILOT_MODE_MISSION1] = std::make_shared<PilotMission1>(this);
+  ModeMap[PILOT_MODE_MISSION2] = std::make_shared<PilotMission2>(this);
 }
 
 /********************************************************************************
@@ -623,11 +583,16 @@ void Controller::setpoint_mapping(void){
   ModeMap[twist_cmd.ctrl_mode]->setpoint_mapping();
 
   //for debug
-  target_angle_publisher->publish(angle_target);
+  geometry_msgs::msg::Point angle_target_deg;
+  angle_target_deg.x = angle_target.x * RAD2DEG;
+  angle_target_deg.y = angle_target.y * RAD2DEG;
+  angle_target_deg.z = angle_target.z * RAD2DEG;
+
+  target_angle_publisher->publish(angle_target_deg);
   target_pos_publisher->publish(pos_target);
 
  
-  if(twist_cmd.ctrl_mode != PILOT_MODE_MISSION){  //不是任务模式，置false,路径跟踪用
+  if(twist_cmd.ctrl_mode != PILOT_MODE_MISSION1 && twist_cmd.ctrl_mode != PILOT_MODE_MISSION2){  //不是任务模式，置false,路径跟踪用
     got_follow_target = false;
     got_task_target   = false;
   }
@@ -654,10 +619,10 @@ void Controller::process_yaw_setpoint(void){
     angle_target.z = status.angle_add + status.yaw_base;  //加上基准值
   }
   
-  //规范到±180度范围
+  //规范到±PI度范围
   angle_target.z = NORMALIZE_YAW(angle_target.z);
 
-  angle_target.z = LIMIT(angle_target.z, -180, 180);   //角度目标值限幅
+  angle_target.z = LIMIT(angle_target.z, -M_PI, M_PI);   //角度目标值限幅
 
 }
 
@@ -670,7 +635,7 @@ void Controller::process_z_setpoint(void){
   if(twist_cmd.ctrl_mode == PILOT_MODE_STABILIZE1 ||
      twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD1 ||
      twist_cmd.ctrl_mode == PILOT_MODE_AUTODEPTH){  //Z轴是定深
-    pos_target.z -= config.z_gain * twist_cmd.z;
+    pos_target.z += config.z_gain * twist_cmd.z;
     pos_target.z = LIMIT(pos_target.z, config.depth_min, config.depth_max);
   }else if(twist_cmd.ctrl_mode == PILOT_MODE_STABILIZE2 ||
            twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD2 ||
@@ -692,8 +657,8 @@ void Controller::process_xy_setpoint(void){
 
   pointBaseLinkToOdom(p_in, p_out);  
 
-  x_target_delta -=  p_out.x;
-  y_target_delta -=  p_out.y;
+  x_target_delta +=  p_out.x;
+  y_target_delta +=  p_out.y;
 
   pos_target.x = x_target_base + x_target_delta;
   pos_target.y = y_target_base + y_target_delta;
@@ -813,6 +778,7 @@ void Controller::attitude_controller_update(geometry_msgs::msg::Point& rate_outp
   attitude_angle_pid(rate_desired, attitude_desired, status.angle);
   
   attitude_rate_pid(rate_output, rate_desired, status.rate);
+
 }
 
 /********************************************************************************
@@ -832,11 +798,11 @@ void Controller::attitude_angle_pid(geometry_msgs::msg::Point& rate_desired, con
 
   //规范到±180度范围
   yaw_error = NORMALIZE_YAW(yaw_error);
-  yaw_error = LIMIT(yaw_error, -30, 30);
+  yaw_error = LIMIT(yaw_error, -M_PI/6, M_PI/6);
 
-  roll_error = LIMIT(roll_error, -30, 30);
+  roll_error = LIMIT(roll_error, -M_PI/6, M_PI/6);
 
-  pitch_error = LIMIT(pitch_error, -30, 30);
+  pitch_error = LIMIT(pitch_error, -M_PI/6, M_PI/6);
 
   if(config.use_rollpitch_ctrl){ //使用俯仰滚转角控制
     rate_desired.x = pid_angle_roll.pid_update(roll_error);
@@ -849,10 +815,6 @@ void Controller::attitude_angle_pid(geometry_msgs::msg::Point& rate_desired, con
 
   rate_desired.z = pid_angle_yaw.pid_update(yaw_error);
 
-  std_msgs::msg::Float32 rate_pub;
-  rate_pub.data = rate_desired.z;
-
-  test_publisher->publish(rate_pub);
   // RCLCPP_INFO(this->get_logger(), "pitch_error[%f],rate_desired.y[%f]",pitch_error, rate_desired.y);
   // RCLCPP_INFO(this->get_logger(), "attitude_desired.z[%f], attitude_actual.z[%f]",attitude_desired.z, attitude_actual.z);
   // RCLCPP_INFO(this->get_logger(), "yaw_error[%f], rate_desired.z[%f]",yaw_error, rate_desired.z);
@@ -905,6 +867,11 @@ void Controller::position_controller_update(geometry_msgs::msg::Point& vel_outpu
   position_velocity_pid(vel_output, vel_desired, status.vel);
   
   vel_output.z = config.thrust_base + vel_output.z;
+
+  std_msgs::msg::Float32 rate_pub;
+  rate_pub.data = vel_desired.z;
+
+  test_publisher->publish(rate_pub);
 }
 
 /********************************************************************************
@@ -958,10 +925,10 @@ void Controller::position_velocity_pid(geometry_msgs::msg::Point& vel_output, co
   float z_vel_error = vel_desired.z - vel_actual.z;
 
   // X and Y
-  vel_output.x = -pid_vx.pid_update(x_vel_error);
-  vel_output.y = -pid_vy.pid_update(y_vel_error);
+  vel_output.x = pid_vx.pid_update(x_vel_error);
+  vel_output.y = pid_vy.pid_update(y_vel_error);
   // Z
-  vel_output.z = -pid_vz.pid_update(z_vel_error);
+  vel_output.z = pid_vz.pid_update(z_vel_error);
 
 }
 
@@ -990,6 +957,29 @@ void Controller::TwistCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::T
     return;
   }
 
+  //判断模式是否合法，不合法就强制为NONE模式，防止内存访问越界
+  if(isModelegal(msg.ctrl_mode)){  
+    twist_cmd.x = msg.x;
+    twist_cmd.y = msg.y;
+    twist_cmd.z = msg.z;
+    twist_cmd.yaw = msg.yaw;
+    twist_cmd.lock_status = msg.lock_status;
+    twist_cmd.ctrl_mode   = msg.ctrl_mode;
+
+    output.lock_status  =  msg.lock_status;
+    output.ctrl_mode    =  msg.ctrl_mode;
+  }else{
+    twist_cmd.x = 0.0;
+    twist_cmd.y = 0.0;
+    twist_cmd.z = 0.0;
+    twist_cmd.yaw = 0.0;
+    twist_cmd.lock_status = 1;
+    twist_cmd.ctrl_mode   = PILOT_MODE_NONE;
+
+    output.lock_status  =  msg.lock_status;
+    output.ctrl_mode    =  msg.ctrl_mode;
+  }
+
   twist_cmd.x = msg.x;
   twist_cmd.y = msg.y;
   twist_cmd.z = msg.z;
@@ -1001,56 +991,8 @@ void Controller::TwistCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::T
   output.ctrl_mode    =  msg.ctrl_mode;
 }
 
-void Controller::ImuPos_callback(const geometry_msgs::msg::PoseStamped& msg){
-  double roll, pitch, yaw;
-  // 使用tf2进行转换
-  tf2::Quaternion tf_quat;
-  tf2::fromMsg(msg.pose.orientation, tf_quat);
-
-  tf2::Matrix3x3 m(tf_quat);
-  m.getRPY(roll, pitch, yaw);
- 
-  status.angle.x = roll * RAD2DEG;
-  status.angle.y = pitch * RAD2DEG;
-  status.angle.z = NORMALIZE_YAW(yaw * RAD2DEG);
-
-  // RCLCPP_INFO(this->get_logger(),"yaw[%f]",status.angle.z);
-
-  if(config.use_imu2navi){  //使用IMU的位置作为位置参考
-    // status.angle.z = NORMALIZE_YAW(yaw * RAD2DEG);
-    status.pos.x = msg.pose.position.x;
-    status.pos.y = msg.pose.position.y;
-    status.imu_alt = msg.pose.position.z;
-  }
-
-  if(status.get_status == 0){
-    status.get_status = 1;
-  }
-}
-
-void Controller::ImuData_callback(const sensor_msgs::msg::Imu& msg){
-  status.rate.x = msg.angular_velocity.x;
-  status.rate.y = msg.angular_velocity.y;
-  status.rate.z = msg.angular_velocity.z;
-}
-
-void Controller::Dvl_callback(const geometry_msgs::msg::TwistWithCovarianceStamped& msg){
-  if(twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD1 ||  //位置保持模式速度使用dvl速度，非位置保持模式使用imu速度
-     twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD2 ||
-     twist_cmd.ctrl_mode == PILOT_MODE_MISSION ){
-
-    // status.vel.x = msg.twist.twist.linear.x;
-    // status.vel.y = msg.twist.twist.linear.y;
-    // status.vel.z = msg.twist.twist.linear.z;
-  }
-}
-
-void Controller::Depth_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg){
-  status.depth = msg.pose.pose.position.z; //取第一个深度计数据
-}
-
 void Controller::Height_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg){
-  status.sonar_height = msg.pose.pose.position.z; //单位m;
+  status.alt = msg.pose.pose.position.z; //单位m;
 }
 
 void Controller::PathTrackStatus_callback(const std_msgs::msg::Bool& msg){
@@ -1066,21 +1008,8 @@ void Controller::PathTrackStatus_callback(const std_msgs::msg::Bool& msg){
   //清除计数，否则计数超时认为跟踪节点断连。
   //会进入位置保持模式，保持在当前位置。需要切换其他模式才可以操纵.
   //或者重新启动路径跟踪节点
-  std::dynamic_pointer_cast<PilotMission>(ModeMap[PILOT_MODE_MISSION])->reset_count();
-}
-
-void Controller::imu_twist_callback(const geometry_msgs::msg::Twist& msg){
-  status.vel.z = msg.linear.z;
-
-  if(twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD1 ||  //位置保持模式速度使用dvl速度，非位置保持模式使用imu速度
-     twist_cmd.ctrl_mode == PILOT_MODE_AUTOHOLD2 ||
-     twist_cmd.ctrl_mode == PILOT_MODE_MISSION ){
-
-    return;
-  }
-
-  status.vel.x = msg.linear.x;
-  status.vel.y = msg.linear.y;
+  std::dynamic_pointer_cast<PilotMission1>(ModeMap[PILOT_MODE_MISSION1])->reset_count();
+  std::dynamic_pointer_cast<PilotMission1>(ModeMap[PILOT_MODE_MISSION2])->reset_count();
 }
 
 void Controller::trackCmd_callback(const msg_FollowCmd& msg){
@@ -1103,7 +1032,7 @@ void Controller::trackCmd_callback(const msg_FollowCmd& msg){
 }
 
 void Controller::taskPoseCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd& msg){
-  if(twist_cmd.ctrl_mode != PILOT_MODE_MISSION){  //不是在任务模式下，忽略任务的位置指令
+  if(twist_cmd.ctrl_mode != PILOT_MODE_MISSION1  && twist_cmd.ctrl_mode != PILOT_MODE_MISSION2){  //不是在任务模式下，忽略任务的位置指令
     return;
   }
 
@@ -1121,10 +1050,51 @@ void Controller::taskPoseCmd_callback(const sealien_ctrlpilot_msgmanagement::msg
 
 }
 
+void Controller::ImuOdom_callback(const nav_msgs::msg::Odometry& msg){
+  if(init_flag.posCount>0){
+    init_flag.posCount--;
+  }
+
+
+  double roll, pitch, yaw;  //rad
+  // 使用tf2进行转换
+  tf2::Quaternion tf_quat;
+  tf2::fromMsg(msg.pose.pose.orientation, tf_quat);
+
+  tf2::Matrix3x3 m(tf_quat);
+  m.getRPY(roll, pitch, yaw);
+
+  status.angle.x = roll;  
+  status.angle.y = pitch;  
+  status.angle.z = yaw; 
+
+
+  status.rate.x = msg.twist.twist.angular.x;
+  status.rate.y = msg.twist.twist.angular.y;
+  status.rate.z = msg.twist.twist.angular.z;
+ 
+  status.vel.z = msg.twist.twist.linear.z;
+
+  //因为dvl+IMU的z轴位置其实不准确
+  //这里的z轴位置是深度计位置，在adapter节点里会处理。
+  status.pos.z = msg.pose.pose.position.z;   
+
+  if(config.use_imu2navi){ //这里是IMU模块的odom，使用IMU的水平位置数据
+    status.vel.x = msg.twist.twist.linear.x;
+    status.vel.y = msg.twist.twist.linear.y;
+
+    status.pos.x = msg.pose.pose.position.x;
+    status.pos.y = msg.pose.pose.position.y;
+  }
+
+
+  status.get_status = true;
+  
+}
 
 //定位模块发出的位置信息
-void Controller::odom_callback(const nav_msgs::msg::Odometry& msg){
-  if(config.use_imu2navi){ //使用IMU的位置数据，就直接返回。
+void Controller::LocateOdom_callback(const nav_msgs::msg::Odometry& msg){
+  if(config.use_imu2navi){ //这里是定位模块的odom，只有水平数据准确，如果使用IMU的位置数据，就直接返回。
     return;
   }
 
@@ -1132,29 +1102,15 @@ void Controller::odom_callback(const nav_msgs::msg::Odometry& msg){
     init_flag.posCount--;
   }
 
-
-  double roll, pitch, yaw;
-  // 使用tf2进行转换
-  tf2::Quaternion tf_quat;
-  tf2::fromMsg(msg.pose.pose.orientation, tf_quat);
-
-  tf2::Matrix3x3 m(tf_quat);
-  m.getRPY(roll, pitch, yaw);
- 
-  // status.angle.z = yaw*RAD2DEG;  //角度转换成°
-
-  // geometry_msgs::msg::Point pout;
-  // pointTransform(msg.pose.pose.position,  pout);
-
-  // status.pos.x = pout.x;
-  // status.pos.y = pout.y;
-
-  status.pos.x = msg.pose.pose.position.x;
-  status.pos.y = msg.pose.pose.position.y;
-
   status.vel.x = msg.twist.twist.linear.x;
   status.vel.y = msg.twist.twist.linear.y;
   // status.vel.z = msg.twist.twist.linear.z;
+ 
+  status.pos.x = msg.pose.pose.position.x;
+  status.pos.y = msg.pose.pose.position.y;
+  // status.pos.z = msg.pose.pose.position.z;
+
+  status.get_status = true;
 }
 
 /********************************************************************************
@@ -1194,7 +1150,7 @@ void Controller::Thru_Cmd_Mix(void){
  * @return :NONE
  *********************************************************************************/
 void Controller::pointOdomToBaseLink(geometry_msgs::msg::Point p_in,  geometry_msgs::msg::Point& p_out){
-  float yaw = status.angle.z/RAD2DEG;
+  float yaw = status.angle.z;
   p_out.x = p_in.x * cos(yaw) + p_in.y * sin(yaw);
   p_out.y = -p_in.x * sin(yaw) + p_in.y * cos(yaw);
 }
@@ -1205,29 +1161,9 @@ void Controller::pointOdomToBaseLink(geometry_msgs::msg::Point p_in,  geometry_m
  * @return :NONE
  *********************************************************************************/
 void Controller::pointBaseLinkToOdom(geometry_msgs::msg::Point p_in,  geometry_msgs::msg::Point& p_out){
-  float yaw = status.angle.z/RAD2DEG;
+  float yaw = status.angle.z;
   p_out.x = p_in.x * cos(yaw) - p_in.y * sin(yaw);
   p_out.y = p_in.x * sin(yaw) + p_in.y * cos(yaw);
-}
-
-/********************************************************************************
- * @brief  :刹车
- * @param  pos_error：位置误差
- * @param  cur_vel：当前速度
- * @return :刹车控制量
- *********************************************************************************/
-double Controller::brake(double pos_error, double cur_vel){
-  double acc_cmd;
-  if(config.pos_use_brake == false){
-    return 0.0;
-  }
-  if(fabs(pos_error) < config.brake_pos_threshold && fabs(cur_vel)>config.brake_vel_threshold){
-    acc_cmd = config.brake_kcoef *cur_vel;
-  }else{
-    acc_cmd = 0;
-  }
-  acc_cmd = acc_cmd > 1.0? 1.0:(acc_cmd<-1.0? -1.0:acc_cmd);   //限幅
-  return acc_cmd;
 }
 
 //判断任务是否执行完成，在任务模式时使用
@@ -1237,10 +1173,10 @@ bool Controller::isTaskFinish(void){
                     pow(status.pos.y-pos_target.y, 3));
 
   bool vel_zero = (status.vel.x < 0.05) && (status.vel.y < 0.05) && (status.vel.z < 0.05);
-  bool rate_zero = (status.rate.x < 0.05) && (status.rate.y < 0.05) && (status.rate.z < 0.05);
-  bool delta_angle_zero = (fabs(angle_target.x - status.angle.x)<0.5) &&
-                          (fabs(angle_target.y - status.angle.y)<0.5) &&
-                          (fabs(angle_target.z - status.angle.z)<0.5) ;
+  bool rate_zero = (status.rate.x < 0.05/RAD2DEG) && (status.rate.y < 0.05/RAD2DEG) && (status.rate.z < 0.05/RAD2DEG);
+  bool delta_angle_zero = (fabs(angle_target.x - status.angle.x)<0.5/RAD2DEG) &&
+                          (fabs(angle_target.y - status.angle.y)<0.5/RAD2DEG) &&
+                          (fabs(angle_target.z - status.angle.z)<0.5/RAD2DEG) ;
 
   if(cur_dist<0.2 && vel_zero && rate_zero && delta_angle_zero){
     return true;
@@ -1255,8 +1191,19 @@ void Controller::TaskFinishPub(void){
   task_finish_publisher->publish(Tfinish_status);
 }
 
-bool Controller::isPosCtrlMode(int ctrlmod){ //判断是否是未知控制
-  if(ctrlmod == PILOT_MODE_AUTOHOLD1 || ctrlmod == PILOT_MODE_AUTOHOLD2 || ctrlmod == PILOT_MODE_MISSION){
+bool Controller::isPosCtrlMode(int ctrlmod){ //判断是否是位置控制
+  if(ctrlmod == PILOT_MODE_AUTOHOLD1 || ctrlmod == PILOT_MODE_AUTOHOLD2 || ctrlmod == PILOT_MODE_MISSION1 || ctrlmod == PILOT_MODE_MISSION2){
+    return true;
+  }else{
+    return false;
+  }
+}
+
+bool Controller::isModelegal(int ctrlmod){ //判断模式是否合法，是返回true
+  if(ctrlmod == PILOT_MODE_NONE || ctrlmod == PILOT_MODE_MANUAL || ctrlmod == PILOT_MODE_STABILIZE1 ||
+     ctrlmod == PILOT_MODE_STABILIZE2 || ctrlmod == PILOT_MODE_AUTODEPTH || ctrlmod == PILOT_MODE_AUTODHIGHT ||
+     ctrlmod == PILOT_MODE_AUTODIRCETION || ctrlmod == PILOT_MODE_AUTOHOLD1 || ctrlmod == PILOT_MODE_AUTOHOLD2 ||
+     ctrlmod == PILOT_MODE_MISSION1 || ctrlmod == PILOT_MODE_MISSION2){
     return true;
   }else{
     return false;

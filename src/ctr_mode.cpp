@@ -12,20 +12,6 @@
 
 namespace ControllerNS{
 
-float CtrModeBase::get_height(void){
-  float height = 0.0;
-  if(controller_->config.alt_source == HEIGHT_FROM_SONAR){// 高度数据来源于测距声呐
-    height = controller_->status.sonar_height;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_DVL){// 高度数据来源于DVL
-    height = controller_->status.dvl_alt;
-  }else if(controller_->config.alt_source == HEIGHT_FROM_IMU){// 高度数据来源于IMU
-    height = controller_->status.imu_alt;
-  }else{
-    height = 0.0;
-  }
-  return height;
-};
-
 /****************NONE模式*******************/
 void PilotNone::setpoint_mapping(void){
  //do nothing
@@ -89,11 +75,11 @@ void PilotStablize1::setpoint_mapping(void){
 
 void PilotStablize1::update(void){
  controller_->attitude_controller_update(rate_output);
- controller_->position_controller_update(vel_output, controller_->status.depth);
+ controller_->position_controller_update(vel_output, controller_->status.pos.z);
 };
 void PilotStablize1::reset(void){
   controller_->attitude_controller_reset();
-  controller_->position_controller_reset(controller_->status.depth);
+  controller_->position_controller_reset(controller_->status.pos.z);
 };
 void PilotStablize1::output(void){
   controller_->output.x = controller_->manual_output.x;
@@ -113,17 +99,12 @@ void PilotStablize2::setpoint_mapping(void){
 
 void PilotStablize2::update(void){
   controller_->attitude_controller_update(rate_output);
-
-  float height = get_height();
-
-  controller_->position_controller_update(vel_output, height);
+  controller_->position_controller_update(vel_output, controller_->status.alt);
 };
 
 void PilotStablize2::reset(void){
   controller_->attitude_controller_reset();
-
-  float height = get_height();;
-  controller_->position_controller_reset(height);
+  controller_->position_controller_reset(controller_->status.alt);
 };
 
 void PilotStablize2::output(void){
@@ -143,11 +124,11 @@ void PilotAutodepth::setpoint_mapping(void){
 };
 
 void PilotAutodepth::update(void){
-  controller_->position_controller_update(vel_output, controller_->status.depth);
+  controller_->position_controller_update(vel_output, controller_->status.pos.z);
 };
 
 void PilotAutodepth::reset(void){
-  controller_->position_controller_reset(controller_->status.depth);
+  controller_->position_controller_reset(controller_->status.pos.z);
 };
 
 void PilotAutodepth::output(void){
@@ -167,12 +148,11 @@ void PilotAutoheight::setpoint_mapping(void){
 };
 
 void PilotAutoheight::update(void){
-  controller_->position_controller_update(vel_output, controller_->status.depth);
+  controller_->position_controller_update(vel_output, controller_->status.pos.z);
 };
 
 void PilotAutoheight::reset(void){
-  float height = get_height();;
-  controller_->position_controller_reset(height);
+  controller_->position_controller_reset(controller_->status.alt);
 };
 
 void PilotAutoheight::output(void){
@@ -217,22 +197,17 @@ void PilotAutoHold1::setpoint_mapping(void){
 
 void PilotAutoHold1::update(void){
   controller_->attitude_controller_update(rate_output);
-  controller_->position_controller_update(vel_output, controller_->status.depth);
+  controller_->position_controller_update(vel_output, controller_->status.pos.z);
 }
 
 void PilotAutoHold1::reset(void){
   controller_->attitude_controller_reset();
-  controller_->position_controller_reset(controller_->status.depth);
+  controller_->position_controller_reset(controller_->status.pos.z);
 };
 
 void PilotAutoHold1::output(void){
-  double posx_error = controller_->pos_target.x - controller_->status.pos.x;
-  double curx_vel = controller_->status.vel.x;
-  double posy_error = controller_->pos_target.y - controller_->status.pos.y;
-  double cury_vel = controller_->status.vel.y;
-
-  controller_->output.x = vel_output.x + controller_->brake(posx_error, curx_vel);
-  controller_->output.y = vel_output.y + controller_->brake(posy_error, cury_vel);
+  controller_->output.x = vel_output.x;
+  controller_->output.y = vel_output.y;
   controller_->output.z = vel_output.z;
 
   controller_->output.roll = rate_output.x;
@@ -249,28 +224,17 @@ void PilotAutoHold2::setpoint_mapping(void){
 
 void PilotAutoHold2::update(void){
   controller_->attitude_controller_update(rate_output);
-
-  float height = get_height();;
-
-  controller_->position_controller_update(vel_output, height);
+  controller_->position_controller_update(vel_output, controller_->status.alt);
 }
 
 void PilotAutoHold2::reset(void){
   controller_->attitude_controller_reset();
-
-  float height = get_height();
- 
-  controller_->position_controller_reset(height);
+  controller_->position_controller_reset(controller_->status.alt);
 };
 
 void PilotAutoHold2::output(void){
-  double posx_error = controller_->pos_target.x - controller_->status.pos.x;
-  double curx_vel = controller_->status.vel.x;
-  double posy_error = controller_->pos_target.y - controller_->status.pos.y;
-  double cury_vel = controller_->status.vel.y;
-
-  controller_->output.x = vel_output.x + controller_->brake(posx_error, curx_vel);
-  controller_->output.y = vel_output.y + controller_->brake(posy_error, cury_vel);;
+  controller_->output.x = vel_output.x;
+  controller_->output.y = vel_output.y;
   controller_->output.z = vel_output.z;
 
   controller_->output.roll = rate_output.x;
@@ -278,8 +242,8 @@ void PilotAutoHold2::output(void){
   controller_->output.yaw = rate_output.z;
 };
 
-/****************路径跟踪*******************/
-void PilotMission::setpoint_mapping(void){
+/****************路径跟踪1，定深*******************/
+void PilotMission1::setpoint_mapping(void){
   if(controller_->have_new_track_status){
     controller_->have_new_track_status = false;
 
@@ -297,7 +261,7 @@ void PilotMission::setpoint_mapping(void){
   }
 };
 
-void PilotMission::update(void){
+void PilotMission1::update(void){
   if(controller_->status.track_status){//跟踪进行
     controller_->attitude_rate_pid(rate_output, controller_->rate_target, controller_->status.rate);
 
@@ -308,14 +272,7 @@ void PilotMission::update(void){
   }else{//位置保持
     controller_->attitude_controller_update(rate_output);
 
-    float height;
-    if(!controller_->config.track_alt_depth){
-      height = controller_->status.depth;
-    }else{
-      height = get_height();
-    }
-
-    controller_->position_controller_update(vel_output, height);
+    controller_->position_controller_update(vel_output, controller_->status.pos.z);
 
 
     if(controller_->got_task_target){  //任务在进行中，需要判断任务是否完成
@@ -329,19 +286,13 @@ void PilotMission::update(void){
   }
 }
 
-void PilotMission::reset(void){
+void PilotMission1::reset(void){
   controller_->attitude_controller_reset();
 
-  //垂向位置是定深还是定高，如果是定高，确定高度来源
-  if(!controller_->config.track_alt_depth){
-    controller_->position_controller_reset(controller_->status.depth);
-  }else{
-    float height = get_height();
-    controller_->position_controller_reset(height);
-  }
+  controller_->position_controller_reset(controller_->status.pos.z);
 
   if(controller_->status.track_status == false){  //从跟踪状态到非跟踪状态
-    RCLCPP_INFO(controller_->get_logger(), "path controller_->got_follow_target[%d]",controller_->got_follow_target);
+    RCLCPP_INFO(controller_->get_logger(), "M1 path controller_->got_follow_target[%d]",controller_->got_follow_target);
     if(controller_->got_follow_target == false){  //之前没有有效路径，那进入定位模式的目标点等于进入时的位置角度
       controller_->angle_target.x = 0.0;
       controller_->angle_target.y = 0.0;
@@ -369,7 +320,7 @@ void PilotMission::reset(void){
   }
 }
 
-void PilotMission::output(void){
+void PilotMission1::output(void){
   controller_->output.x = vel_output.x;
   controller_->output.y = vel_output.y;
   controller_->output.z = vel_output.z;
@@ -388,7 +339,95 @@ void PilotMission::output(void){
   // controller_->output.yaw   = 0.0;
 };
 
+/****************路径跟踪2，定高*******************/
+void PilotMission2::setpoint_mapping(void){
+  if(controller_->have_new_track_status){
+    controller_->have_new_track_status = false;
+
+    reset();//重置控制器
+  }
+
+  if(lost_track_status_count < 60){
+    lost_track_status_count++;
+  }
+
+  if(lost_track_status_count >= 60 && lost_track_status_count!= 70){  //20HZ更新，大于3秒钟认为丢失路径跟踪节点
+    lost_track_status_count = 70;  //防止再次进入
+    controller_->status.track_status = false;   //强制状态为跟踪完成
+    controller_->have_new_track_status = true;  //标志有新状态
+  }
+};
+
+void PilotMission2::update(void){
+  if(controller_->status.track_status){//跟踪进行
+    controller_->attitude_rate_pid(rate_output, controller_->rate_target, controller_->status.rate);
+
+    controller_->position_velocity_pid(vel_output, controller_->vel_target, controller_->status.vel);
+  
+    vel_output.z = controller_->config.thrust_base + vel_output.z;
+    // RCLCPP_INFO(controller_->get_logger(), "path track");
+  }else{//位置保持
+    controller_->attitude_controller_update(rate_output);
+
+    controller_->position_controller_update(vel_output, controller_->status.alt);
 
 
+    if(controller_->got_task_target){  //任务在进行中，需要判断任务是否完成
+      if(controller_->isTaskFinish()){
+        controller_->TaskFinishPub();
+        controller_->got_task_target = false;
+      }
+    }
+
+    // RCLCPP_INFO(controller_->get_logger(), "pos hold");
+  }
+}
+
+void PilotMission2::reset(void){
+  controller_->attitude_controller_reset();
+
+  controller_->position_controller_reset(controller_->status.alt);
+
+  // RCLCPP_INFO(controller_->get_logger(), "alt[%f], target[%f]",controller_->status.alt, controller_->pos_target.z);
+
+  if(controller_->status.track_status == false){  //从跟踪状态到非跟踪状态
+    RCLCPP_INFO(controller_->get_logger(), "M2 path controller_->got_follow_target[%d]",controller_->got_follow_target);
+    if(controller_->got_follow_target == false){  //之前没有有效路径，那进入定位模式的目标点等于进入时的位置角度
+      controller_->angle_target.x = 0.0;
+      controller_->angle_target.y = 0.0;
+      controller_->angle_target.z = controller_->status.yaw_base;
+      controller_->pos_target.x = controller_->x_target_base;
+      controller_->pos_target.y = controller_->y_target_base;
+      RCLCPP_INFO(controller_->get_logger(), "path track  false");
+    }else{//如果之前有有效路径，说明跟踪完成，则目标点是路径最后一点
+      controller_->pos_target.x = controller_->follow_target_pos.x;
+      controller_->pos_target.y = controller_->follow_target_pos.y;
+
+      controller_->angle_target.x = 0.0;
+      controller_->angle_target.y = 0.0;
+      
+      if(controller_->follow_direct){  //倒退时，目标角度与实际角度相差180°
+        controller_->angle_target.z = controller_->follow_target_ang + 180;
+        controller_->angle_target.z = controller_->angle_target.z>180? (controller_->angle_target.z-360):controller_->angle_target.z;
+      }else{
+        controller_->angle_target.z = controller_->follow_target_ang;
+      }
+      
+      RCLCPP_INFO(controller_->get_logger(), "path track  true");
+      controller_->got_follow_target = false;
+    }
+  }
+}
+
+void PilotMission2::output(void){
+  controller_->output.x = vel_output.x;
+  controller_->output.y = vel_output.y;
+  controller_->output.z = vel_output.z;
+
+  controller_->output.roll  = rate_output.x;
+  controller_->output.pitch = rate_output.y;
+  controller_->output.yaw   = rate_output.z;
+
+};
 
 } //end namespace ControllerNS

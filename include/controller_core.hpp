@@ -90,15 +90,12 @@ namespace ControllerNS{
 #define DEFUALT_ACCURACY (0.02)  //默认控制精度
 #define DEFUALT_USE_ROLLPITCH (false)  //默认不使用
 #define DEFUALT_USE_IMU2NAVI  (false)  //默认不使用
-
-#define DEFUALT_REF_LAT (2.80169)  //默认南沙
-#define DEFUALT_REF_LON (113.52497)  //默认南沙
 #define DEFUALT_REF_ALT (0)  //
 #define DEFUALT_TRACK_ALT_DEPTH (0)  //
 
 #define LIMIT(x, min, max)   (x<min? min:(x>max? max:x))
 #define DEADZONE(x, down, up) (x<down? x:(x>up? x:0))
-#define NORMALIZE_YAW(x) (x>180.0? (x-360.0):(x<-180? (x+360.0):x))
+#define NORMALIZE_YAW(x) (x>M_PI? (x- 2*M_PI):(x<-M_PI? (x+ 2*M_PI):x))
 // #define DEG2RAD (180.0/M_PI)
 #define RAD2DEG (180.0/M_PI)
 //exp函数系数
@@ -116,7 +113,8 @@ typedef enum{
   PILOT_MODE_AUTODIRCETION  = 6,    //定向
   PILOT_MODE_AUTOHOLD1      = 7,    //x、y、z位置保持,z轴是定深
   PILOT_MODE_AUTOHOLD2      = 8,    //x、y、z位置保持,z轴是定高
-  PILOT_MODE_MISSION        = 9     //路径跟踪
+  PILOT_MODE_MISSION1       = 9,     //路径跟踪，z轴是定深
+  PILOT_MODE_MISSION2       = 10    //路径跟踪，z轴是定高
 } Ctrl_Mode;
 
 typedef enum{
@@ -143,15 +141,12 @@ public:
 };
 
 typedef struct{
-  geometry_msgs::msg::Point angle;   //角度
-  geometry_msgs::msg::Point rate;    //角速度
-  geometry_msgs::msg::Point pos;     //位置
-  geometry_msgs::msg::Point vel;     //速度
-  float sonar_height;  //声呐高度
-  float depth; //深度计深度
-  float dvl_alt; //dvl高度
-  double imu_alt; //imu高度
-  uint8_t get_status;  //是否获得状态标质量，0:未获得， 1:获得
+  geometry_msgs::msg::Point angle;   //角度rad
+  geometry_msgs::msg::Point rate;    //角速度rad/s
+  geometry_msgs::msg::Point pos;     //位置m
+  geometry_msgs::msg::Point vel;     //速度m/s
+  double alt;  //高度m
+  bool get_status;  //是否获得状态标质量，0:未获得， 1:获得
   float yaw_base; //基准航向，用于航向范围锁定,当切换到定向时，设为当前艏向角
   uint8_t reset_target_yaw_flag; //m目标航向角重置标志量
   bool track_status; //路径跟踪状态
@@ -171,20 +166,11 @@ typedef struct{
   float x_max; //最大距离
   float y_min; //最小距离
   float y_max; //最大距离
-  uint8_t alt_source; //高度数据来源，0:测距声呐，1:dvl, 2:imu, 
   float height_min; //最小高度，由高度计决定
   float height_max; //最大高度，由高度计决定
   float ctrl_accuracy;  //控制精度
   bool use_rollpitch_ctrl;  //俯仰滚转角控制，0:不启用，1:启用
-  double ref_lat; //参考纬度，当使用IMU经纬度作为位置参考时使用，原点的纬度
-  double ref_lon; //参考经度，当使用IMU经纬度作为位置参考时使用，原点的经度
-  double ref_alt; //参考高度，当使用IMU经纬度作为位置参考时使用，原点的高度/或者深度
   bool use_imu2navi; //是否使用IMU位置信息导航，0:不使用（使用定位模块的位置信息），1:使用
-  uint8_t track_alt_depth; //路径跟踪完成后，进入位置保持模式，是定高还是定深，0:定深，1:定高
-  bool pos_use_brake;  //位置控制时，是否使用刹车功能（x,y方向），用于到达位置时快速减速，
-  double brake_pos_threshold; //进入刹车时的位置误差阈值，m
-  double brake_vel_threshold; //进入刹车时的速度阈值m/s
-  double brake_kcoef;  //刹车时的比例系数
 }Cfg_t; 
 
 
@@ -204,10 +190,10 @@ public:
   void position_controller_update(geometry_msgs::msg::Point& vel_output, float z_status);
   void attitude_controller_reset(void);
   void position_controller_reset(float z_status);
-  double brake(double pos_error, double cur_vel);
   bool isTaskFinish(void);   //判断任务是否完成
   void TaskFinishPub(void);   //判断任务是否完成
   bool isPosCtrlMode(int ctrlmod);
+  bool isModelegal(int ctrlmod);
 
   void attitude_angle_pid(geometry_msgs::msg::Point& rate_desired, const geometry_msgs::msg::Point attitude_desired,
     const geometry_msgs::msg::Point attitude_actual);
@@ -251,7 +237,6 @@ public:
   sealien_ctrlpilot_msgmanagement::msg::TwistCmd twist_cmd; //直接从遥控器读到的操纵数据，四个操纵两,模式，锁状态
 
   std::map<int, std::shared_ptr<CtrModeBase>> ModeMap;
-  GeographicLib::LocalCartesian origin_ref;   //创建一个LocalCartesian对象，用于将经纬度转换为局部笛卡尔坐标
   // bool track_status; //路径跟踪时的状态，0:跟踪任务结束，1:跟踪任务还未结束
   bool have_new_track_status; //有新的路径状态，用于检测路径状态更新
 
@@ -280,16 +265,11 @@ private:
   void timer_1HZ_callback();
 
   void TwistCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::TwistCmd& msg);
-  void ImuPos_callback(const geometry_msgs::msg::PoseStamped& msg);
-  void ImuData_callback(const sensor_msgs::msg::Imu& msg);
-  void Dvl_callback(const geometry_msgs::msg::TwistWithCovarianceStamped& msg);
-  void Depth_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg);
+  void ImuOdom_callback(const nav_msgs::msg::Odometry& msg);
   void Height_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg);
-  void resetRef_callback(const std_msgs::msg::Bool& msg);
-  void odom_callback(const nav_msgs::msg::Odometry& msg);
+  void LocateOdom_callback(const nav_msgs::msg::Odometry& msg);
   void trackCmd_callback(const msg_FollowCmd& msg);
   void PathTrackStatus_callback(const std_msgs::msg::Bool& msg);
-  void imu_twist_callback(const geometry_msgs::msg::Twist& msg);
   void taskPoseCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd& msg);
 
   rclcpp::TimerBase::SharedPtr timer_cycle_20HZ;
@@ -304,11 +284,8 @@ private:
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr task_finish_publisher; 
 
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>::SharedPtr TwistCmd_subscriber;      //订阅遥控指令
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr imuPos_subscriber;                //订阅状态数据
-  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imuData_subscriber;                //订阅状态数据
-  rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr  depth_subscriber;     //订阅深度数据
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr imuOdom_subscriber;                //订阅状态数据
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr height_subscriber;    //订阅高度数据
-  rclcpp::Subscription<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr dvl_subscriber;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber;   //订阅定位模块的位置信息，只使用x、y、和yaw角
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr pathTrackStatus_subscriber;    //订阅路径跟踪状态
   rclcpp::Subscription<msg_FollowCmd>::SharedPtr track_cmd_subscriber;   //订阅路径跟踪模块下发的速度

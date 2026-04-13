@@ -34,7 +34,6 @@ public:
   virtual void update(void) = 0;
   virtual void reset(void) = 0;
   virtual void output(void) = 0;
-  float get_height(void);
 };
 
 
@@ -149,11 +148,11 @@ public:
 };
 
 
-//PILOT_MODE_MISSION
-class PilotMission:public CtrModeBase{
+//PILOT_MODE_MISSION1
+class PilotMission1:public CtrModeBase{
 public:
-  PilotMission(Controller* controller):CtrModeBase(controller){ lost_track_status_count = 0;}
-  ~PilotMission(){}
+  PilotMission1(Controller* controller):CtrModeBase(controller){ lost_track_status_count = 0;}
+  ~PilotMission1(){}
 
   virtual void setpoint_mapping(void);
   virtual void update(void);
@@ -164,6 +163,22 @@ public:
 private:
   uint32_t lost_track_status_count;  //计时，判断是否丢失路径跟踪状态
 
+};
+
+//PILOT_MODE_MISSION2
+class PilotMission2:public CtrModeBase{
+public:
+  PilotMission2(Controller* controller):CtrModeBase(controller){ lost_track_status_count = 0;}
+  ~PilotMission2(){}
+
+  virtual void setpoint_mapping(void);
+  virtual void update(void);
+  virtual void reset(void);
+  virtual void output(void);
+
+  void reset_count(void){lost_track_status_count = 0;}
+private:
+  uint32_t lost_track_status_count;  //计时，判断是否丢失路径跟踪状态
 };
 
 
