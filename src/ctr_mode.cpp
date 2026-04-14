@@ -308,8 +308,8 @@ void PilotMission1::reset(void){
       controller_->angle_target.y = 0.0;
       
       if(controller_->follow_direct){  //倒退时，目标角度与实际角度相差180°
-        controller_->angle_target.z = controller_->follow_target_ang + 180;
-        controller_->angle_target.z = controller_->angle_target.z>180? (controller_->angle_target.z-360):controller_->angle_target.z;
+        controller_->angle_target.z = controller_->follow_target_ang + M_PI;
+        controller_->angle_target.z = controller_->angle_target.z>M_PI? (controller_->angle_target.z-2*M_PI):controller_->angle_target.z;
       }else{
         controller_->angle_target.z = controller_->follow_target_ang;
       }
@@ -407,8 +407,8 @@ void PilotMission2::reset(void){
       controller_->angle_target.y = 0.0;
       
       if(controller_->follow_direct){  //倒退时，目标角度与实际角度相差180°
-        controller_->angle_target.z = controller_->follow_target_ang + 180;
-        controller_->angle_target.z = controller_->angle_target.z>180? (controller_->angle_target.z-360):controller_->angle_target.z;
+        controller_->angle_target.z = controller_->follow_target_ang + M_PI;
+        controller_->angle_target.z = controller_->angle_target.z>M_PI? (controller_->angle_target.z-2*M_PI):controller_->angle_target.z;
       }else{
         controller_->angle_target.z = controller_->follow_target_ang;
       }

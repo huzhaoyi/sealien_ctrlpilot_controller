@@ -1009,7 +1009,7 @@ void Controller::PathTrackStatus_callback(const std_msgs::msg::Bool& msg){
   //会进入位置保持模式，保持在当前位置。需要切换其他模式才可以操纵.
   //或者重新启动路径跟踪节点
   std::dynamic_pointer_cast<PilotMission1>(ModeMap[PILOT_MODE_MISSION1])->reset_count();
-  std::dynamic_pointer_cast<PilotMission1>(ModeMap[PILOT_MODE_MISSION2])->reset_count();
+  std::dynamic_pointer_cast<PilotMission2>(ModeMap[PILOT_MODE_MISSION2])->reset_count();
 }
 
 void Controller::trackCmd_callback(const msg_FollowCmd& msg){
