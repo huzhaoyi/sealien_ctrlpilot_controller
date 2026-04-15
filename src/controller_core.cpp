@@ -39,14 +39,11 @@ Controller::Controller(std::string node_name):Node(node_name){
   TwistCmd_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>(
     "/obc/twist_cmd", 10, std::bind(&Controller::TwistCmd_callback, this, _1));       //订阅控制指令
 
-  imuOdom_subscriber = this->create_subscription<nav_msgs::msg::Odometry>(
-    "/msg_adapter/imu_odom", 10, std::bind(&Controller::ImuOdom_callback, this, _1));       //订阅状态数据
+  RovOdom_subscriber = this->create_subscription<nav_msgs::msg::Odometry>(
+    "/msg_adapter/rov_odom", 10, std::bind(&Controller::RovOdom_callback, this, _1));       //订阅状态数据
 
   height_subscriber = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
     "/msg_adapter/sonar/pose", 10, std::bind(&Controller::Height_callback, this, _1));       //订阅高度数据
-
-  odom_subscriber = this->create_subscription<nav_msgs::msg::Odometry>("/odometry/filtered", 10,
-    std::bind(&Controller::LocateOdom_callback, this, _1));       //订阅重置参考点指令
 
   track_cmd_subscriber = this->create_subscription<msg_FollowCmd>("/pure_pursuit_node/follow_cmd", 10,
     std::bind(&Controller::trackCmd_callback, this, _1));       //订阅重置参考点指令
@@ -103,28 +100,11 @@ void Controller::timer_1HZ_callback(){
  * @return :NONE
  *********************************************************************************/
 void Controller::Run(){
-  if(!init_flag.isInitFinish){
-    if(init_flag.isPosCtrl){
-      if(init_flag.posCount <= 0){
-        init_flag.isInitFinish = true;
-        attitude_controller_reset();
-        position_controller_reset(status.pos.z);
-      }
-
-    }else{
-      init_flag.isInitFinish = true;
-    }
-  }
-
-
-  if(status.get_status && init_flag.isInitFinish){  //只有获取状态量后才开始计算
-    setpoint_mapping();  //遥控器数据处理
-    controller_mode_sw();  //每次计算都要先判断控制模式，如果需要就切换
-    controller_step();  //控制更新
-    control_output();    //控制输出
-  }
-
-
+  setpoint_mapping();  //遥控器数据处理
+  controller_mode_sw();  //每次计算都要先判断控制模式，如果需要就切换
+  controller_step();  //控制更新
+  control_output();    //控制输出
+  
   // RCLCPP_INFO(this->get_logger(), "get_status[%d]", status.get_status);
 
 }
@@ -152,7 +132,6 @@ void Controller::controller_init(){
   this->declare_parameter<double>("height_max", DEFUALT_ALT_MAX);
   this->declare_parameter<double>("ctrl_accuracy", DEFUALT_ACCURACY);
   this->declare_parameter<bool>("use_rollpitch_ctrl", DEFUALT_USE_ROLLPITCH);
-  this->declare_parameter<bool>("use_imu2navi", DEFUALT_USE_IMU2NAVI);
 
   config.dt = this->get_parameter("dt").as_double();
   config.yaw_gain = this->get_parameter("yaw_gain").as_double(); 
@@ -165,7 +144,6 @@ void Controller::controller_init(){
   config.height_max = this->get_parameter("height_max").as_double();
   config.ctrl_accuracy = this->get_parameter("ctrl_accuracy").as_double();
   config.use_rollpitch_ctrl = this->get_parameter("use_rollpitch_ctrl").as_bool();
-  config.use_imu2navi = this->get_parameter("use_imu2navi").as_bool();
 
   config.x_min = this->get_parameter("x_min").as_double();
   config.x_max = this->get_parameter("x_max").as_double();
@@ -238,10 +216,6 @@ void Controller::controller_init(){
 
   attitude_controller_init();   //姿态控制器初始化
   position_controller_init();   //位置控制器初始化
-
-  init_flag.isInitFinish = false;  //初始时置false，需要经过初始化
-  init_flag.isPosCtrl  = true;  //初始默认遥控器给的是位置控制
-  init_flag.posCount = 10;
 
   //实例化控制模式
   ModeMap[PILOT_MODE_NONE] = std::make_shared<PilotNone>(this);
@@ -853,16 +827,19 @@ void Controller::attitude_rate_pid(geometry_msgs::msg::Point& rate_output, const
  *********************************************************************************/
 void Controller::position_controller_update(geometry_msgs::msg::Point& vel_output, float z_status){
   geometry_msgs::msg::Point pos_desired;
+  geometry_msgs::msg::Point pos_cur;
   geometry_msgs::msg::Point vel_desired;
 
   pos_desired.x = pos_target.x;
   pos_desired.y = pos_target.y;
   pos_desired.z = pos_target.z;
 
-  status.pos.z = z_status;
+  pos_cur.x = status.pos.x;
+  pos_cur.y = status.pos.y;
+  pos_cur.z = z_status;
 
 
-  position_pos_pid(vel_desired, pos_desired, status.pos);
+  position_pos_pid(vel_desired, pos_desired, pos_cur);
 
   position_velocity_pid(vel_output, vel_desired, status.vel);
   
@@ -952,11 +929,6 @@ void Controller::clear_output(void){
  * @return NONE
 *********************************************************************************/
 void Controller::TwistCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::TwistCmd& msg){
-  if(!init_flag.isInitFinish){
-    init_flag.isPosCtrl = isPosCtrlMode(msg.ctrl_mode);
-    return;
-  }
-
   //判断模式是否合法，不合法就强制为NONE模式，防止内存访问越界
   if(isModelegal(msg.ctrl_mode)){  
     twist_cmd.x = msg.x;
@@ -1050,11 +1022,7 @@ void Controller::taskPoseCmd_callback(const sealien_ctrlpilot_msgmanagement::msg
 
 }
 
-void Controller::ImuOdom_callback(const nav_msgs::msg::Odometry& msg){
-  if(init_flag.posCount>0){
-    init_flag.posCount--;
-  }
-
+void Controller::RovOdom_callback(const nav_msgs::msg::Odometry& msg){
 
   double roll, pitch, yaw;  //rad
   // 使用tf2进行转换
@@ -1073,45 +1041,20 @@ void Controller::ImuOdom_callback(const nav_msgs::msg::Odometry& msg){
   status.rate.y = msg.twist.twist.angular.y;
   status.rate.z = msg.twist.twist.angular.z;
  
+
+  status.vel.x = msg.twist.twist.linear.x;
+  status.vel.y = msg.twist.twist.linear.y;
   status.vel.z = msg.twist.twist.linear.z;
 
   //因为dvl+IMU的z轴位置其实不准确
   //这里的z轴位置是深度计位置，在adapter节点里会处理。
-  status.pos.z = msg.pose.pose.position.z;   
-
-  if(config.use_imu2navi){ //这里是IMU模块的odom，使用IMU的水平位置数据
-    status.vel.x = msg.twist.twist.linear.x;
-    status.vel.y = msg.twist.twist.linear.y;
-
-    status.pos.x = msg.pose.pose.position.x;
-    status.pos.y = msg.pose.pose.position.y;
-  }
-
-
-  status.get_status = true;
-  
-}
-
-//定位模块发出的位置信息
-void Controller::LocateOdom_callback(const nav_msgs::msg::Odometry& msg){
-  if(config.use_imu2navi){ //这里是定位模块的odom，只有水平数据准确，如果使用IMU的位置数据，就直接返回。
-    return;
-  }
-
-  if(init_flag.posCount>0){
-    init_flag.posCount--;
-  }
-
-  status.vel.x = msg.twist.twist.linear.x;
-  status.vel.y = msg.twist.twist.linear.y;
-  // status.vel.z = msg.twist.twist.linear.z;
- 
   status.pos.x = msg.pose.pose.position.x;
   status.pos.y = msg.pose.pose.position.y;
-  // status.pos.z = msg.pose.pose.position.z;
-
+  status.pos.z = msg.pose.pose.position.z;
+  
   status.get_status = true;
 }
+
 
 /********************************************************************************
  * @brief  :动力分配

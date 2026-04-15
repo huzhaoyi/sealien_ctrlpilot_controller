@@ -23,17 +23,20 @@ class Controller;
 //基类
 class CtrModeBase{
 public:
-  CtrModeBase(Controller* controller){ controller_ = controller;}
+  CtrModeBase(Controller* controller){ controller_ = controller; modeHasReset = false;}
   ~CtrModeBase(){}
 
   Controller* controller_;
   geometry_msgs::msg::Point rate_output;  //角速度指令输出
   geometry_msgs::msg::Point vel_output;   //速度指令输出
+  bool modeHasReset;//模式是否重置
+  geometry_msgs::msg::Point last_pos;  //记录上一时刻的位置，用于判断位置是否突变，如果突变则重置目标点
 
   virtual void setpoint_mapping(void) = 0;
   virtual void update(void) = 0;
   virtual void reset(void) = 0;
   virtual void output(void) = 0;
+  virtual bool isNeedResetTarget(void) = 0;
 };
 
 
@@ -47,6 +50,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 };
 
 
@@ -60,6 +64,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 };
 
 //PILOT_MODE_STABILIZE1
@@ -72,6 +77,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 };
 
 //PILOT_MODE_STABILIZE2
@@ -84,6 +90,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 };
 
 //PILOT_MODE_AUTODEPTH
@@ -96,6 +103,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 };
 
 //PILOT_MODE_AUTODHIGHT
@@ -108,6 +116,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 };
 
 
@@ -121,6 +130,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 };
 
 //PILOT_MODE_AUTOHOLD1
@@ -133,6 +143,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 };
 
 //PILOT_MODE_AUTOHOLD2
@@ -145,6 +156,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 };
 
 
@@ -158,6 +170,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 
   void reset_count(void){lost_track_status_count = 0;}
 private:
@@ -175,6 +188,7 @@ public:
   virtual void update(void);
   virtual void reset(void);
   virtual void output(void);
+  virtual bool isNeedResetTarget(void);
 
   void reset_count(void){lost_track_status_count = 0;}
 private:

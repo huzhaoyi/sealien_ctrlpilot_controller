@@ -39,7 +39,6 @@ controller:
     y_min: -100000.0 #y方向最小值
     y_max: 100000.0 #y方向最大值
     use_rollpitch_ctrl: true #是否使用俯仰滚转角控制，0:不使用，1:使用
-    use_imu2navi: true #是否使用IMU位置信息导航，0:不使用（使用定位模块的位置信息），1:使用
    
     angle_roll_pid_P: 0.1 #roll P
     angle_roll_pid_I: 0.01 #roll I

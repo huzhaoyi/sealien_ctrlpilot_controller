@@ -15,15 +15,15 @@ namespace ControllerNS{
 /****************NONE模式*******************/
 void PilotNone::setpoint_mapping(void){
  //do nothing
-};
+}
 
 void PilotNone::update(void){
   controller_->clear_output();
-};
+}
 
 void PilotNone::reset(void){
   controller_->clear_output();
-};
+}
 
 void PilotNone::output(void){
   controller_->output.x = 0.0;
@@ -32,8 +32,11 @@ void PilotNone::output(void){
   controller_->output.roll  = 0.0;
   controller_->output.pitch = 0.0;
   controller_->output.yaw   = 0.0;
-};
+}
 
+bool PilotNone::isNeedResetTarget(void){
+  return false;
+}
 
 /****************手动模式*******************/
  void PilotManual::setpoint_mapping(void){
@@ -53,7 +56,8 @@ void PilotNone::output(void){
  }
 
  void PilotManual::reset(void){
-  //do nothing
+  modeHasReset = true;
+
  }
 
  void PilotManual::output(void){
@@ -65,22 +69,29 @@ void PilotNone::output(void){
   controller_->output.yaw   = rate_output.z;
  }
 
-
+ bool PilotManual::isNeedResetTarget(void){
+  return false;
+}
 
 /****************稳定模式1*******************/
 void PilotStablize1::setpoint_mapping(void){
+  if(isNeedResetTarget()){
+    reset();
+  }
+
   controller_->process_yaw_setpoint();
   controller_->process_z_setpoint();
-};
+}
 
 void PilotStablize1::update(void){
  controller_->attitude_controller_update(rate_output);
  controller_->position_controller_update(vel_output, controller_->status.pos.z);
-};
+}
 void PilotStablize1::reset(void){
+  modeHasReset = true;
   controller_->attitude_controller_reset();
   controller_->position_controller_reset(controller_->status.pos.z);
-};
+}
 void PilotStablize1::output(void){
   controller_->output.x = controller_->manual_output.x;
   controller_->output.y = controller_->manual_output.y;
@@ -89,23 +100,41 @@ void PilotStablize1::output(void){
   controller_->output.roll = rate_output.x;
   controller_->output.pitch = rate_output.y;
   controller_->output.yaw = rate_output.z;
-};
+}
+
+bool PilotStablize1::isNeedResetTarget(void){
+  if(!modeHasReset){  //模式没有重置过，需要重置
+    return true;
+  }
+  geometry_msgs::msg::Point cur_pos = controller_->status.pos;
+  double delta_dist = fabs(cur_pos.z - last_pos.z);
+  last_pos = cur_pos;
+  if(delta_dist>1.0){ //位置突变，需要重置
+    return true;
+  }
+  return false;
+}
 
 /****************稳定模式2*******************/
 void PilotStablize2::setpoint_mapping(void){
+  if(isNeedResetTarget()){
+    reset();
+  }
+
   controller_->process_yaw_setpoint();
   controller_->process_z_setpoint();
-};
+}
 
 void PilotStablize2::update(void){
   controller_->attitude_controller_update(rate_output);
   controller_->position_controller_update(vel_output, controller_->status.alt);
-};
+}
 
 void PilotStablize2::reset(void){
+  modeHasReset = true;
   controller_->attitude_controller_reset();
   controller_->position_controller_reset(controller_->status.alt);
-};
+}
 
 void PilotStablize2::output(void){
   controller_->output.x = controller_->manual_output.x;
@@ -115,21 +144,42 @@ void PilotStablize2::output(void){
   controller_->output.roll = rate_output.x;
   controller_->output.pitch = rate_output.y;
   controller_->output.yaw = rate_output.z;
-};
+}
 
+bool PilotStablize2::isNeedResetTarget(void){
+  if(!modeHasReset){  //模式没有重置过，需要重置
+    return true;
+  }
+  geometry_msgs::msg::Point cur_pos = controller_->status.pos;
+  double delta_dist = fabs(controller_->status.alt - last_pos.z);
+  last_pos.x = cur_pos.x;
+  last_pos.y = cur_pos.y;
+  last_pos.z = controller_->status.alt;
+
+  if(delta_dist>1.0){ //位置突变，需要重置
+    return true;
+  }
+
+  return false;
+}
 
 /****************深度控制*******************/
 void PilotAutodepth::setpoint_mapping(void){
+  if(isNeedResetTarget()){
+    reset();
+  }
+
   controller_->process_z_setpoint();
-};
+}
 
 void PilotAutodepth::update(void){
   controller_->position_controller_update(vel_output, controller_->status.pos.z);
-};
+}
 
 void PilotAutodepth::reset(void){
+  modeHasReset = true;
   controller_->position_controller_reset(controller_->status.pos.z);
-};
+}
 
 void PilotAutodepth::output(void){
   controller_->output.x = controller_->manual_output.x;
@@ -139,21 +189,38 @@ void PilotAutodepth::output(void){
   controller_->output.roll = controller_->manual_output.roll;
   controller_->output.pitch = controller_->manual_output.pitch;
   controller_->output.yaw = rate_output.z;
-};
+}
 
+bool PilotAutodepth::isNeedResetTarget(void){
+  if(!modeHasReset){  //模式没有重置过，需要重置
+    return true;
+  }
+  geometry_msgs::msg::Point cur_pos = controller_->status.pos;
+  double delta_dist = fabs(cur_pos.z - last_pos.z);
+  last_pos = cur_pos;
+  if(delta_dist>1.0){ //位置突变，需要重置
+    return true;
+  }
+  return false;
+}
 
 /****************高度控制*******************/
 void PilotAutoheight::setpoint_mapping(void){
+  if(isNeedResetTarget()){
+    reset();
+  }
+
   controller_->process_z_setpoint();
-};
+}
 
 void PilotAutoheight::update(void){
   controller_->position_controller_update(vel_output, controller_->status.pos.z);
-};
+}
 
 void PilotAutoheight::reset(void){
+  modeHasReset = true;
   controller_->position_controller_reset(controller_->status.alt);
-};
+}
 
 void PilotAutoheight::output(void){
   controller_->output.x = controller_->manual_output.x;
@@ -163,20 +230,42 @@ void PilotAutoheight::output(void){
   controller_->output.roll = controller_->manual_output.roll;
   controller_->output.pitch = controller_->manual_output.pitch;
   controller_->output.yaw = rate_output.z;
-};
+}
+
+bool PilotAutoheight::isNeedResetTarget(void){
+  if(!modeHasReset){  //模式没有重置过，需要重置
+    return true;
+  }
+  geometry_msgs::msg::Point cur_pos = controller_->status.pos;
+  double delta_dist = fabs(controller_->status.alt - last_pos.z);
+  last_pos.x = cur_pos.x;
+  last_pos.y = cur_pos.y;
+  last_pos.z = controller_->status.alt;
+
+  if(delta_dist>1.0){ //位置突变，需要重置
+    return true;
+  }
+
+  return false;
+}
 
 /****************艏向控制*******************/
 void PilotAutoDirection::setpoint_mapping(void){
+  if(isNeedResetTarget()){
+    reset();
+  }
+
   controller_->process_yaw_setpoint();
-};
+}
 
 void PilotAutoDirection::update(void){
   controller_->attitude_controller_update(rate_output);
-};
+}
 
 void PilotAutoDirection::reset(void){
+  modeHasReset = true;
   controller_->attitude_controller_reset();
-};
+}
 
 void PilotAutoDirection::output(void){
   controller_->output.x = controller_->manual_output.x;
@@ -186,14 +275,24 @@ void PilotAutoDirection::output(void){
   controller_->output.roll = rate_output.x;
   controller_->output.pitch = rate_output.y;
   controller_->output.yaw = rate_output.z;
-};
+}
+
+bool PilotAutoDirection::isNeedResetTarget(void){
+  if(!modeHasReset){  //模式没有重置过，需要重置
+    return true;
+  }
+}
 
 /****************位置保持1*******************/
 void PilotAutoHold1::setpoint_mapping(void){
+  if(isNeedResetTarget()){
+    reset();
+  }
+
   controller_->process_yaw_setpoint();
   controller_->process_xy_setpoint();
   controller_->process_z_setpoint();
-};
+}
 
 void PilotAutoHold1::update(void){
   controller_->attitude_controller_update(rate_output);
@@ -201,9 +300,10 @@ void PilotAutoHold1::update(void){
 }
 
 void PilotAutoHold1::reset(void){
+  modeHasReset = true;
   controller_->attitude_controller_reset();
   controller_->position_controller_reset(controller_->status.pos.z);
-};
+}
 
 void PilotAutoHold1::output(void){
   controller_->output.x = vel_output.x;
@@ -213,14 +313,31 @@ void PilotAutoHold1::output(void){
   controller_->output.roll = rate_output.x;
   controller_->output.pitch = rate_output.y;
   controller_->output.yaw = rate_output.z;
-};
+}
+
+bool PilotAutoHold1::isNeedResetTarget(void){
+  if(!modeHasReset){  //模式没有重置过，需要重置
+    return true;
+  }
+  geometry_msgs::msg::Point cur_pos = controller_->status.pos;
+  double delta_dist = sqrt(pow(cur_pos.x - last_pos.x, 2)+pow(cur_pos.y - last_pos.y, 2)+ pow(cur_pos.z - last_pos.z, 2));
+  last_pos = cur_pos;
+  if(delta_dist>1.0){ //位置突变，需要重置
+    return true;
+  }
+  return false;
+}
 
 /****************位置保持2*******************/
 void PilotAutoHold2::setpoint_mapping(void){
+  if(isNeedResetTarget()){
+    reset();
+  }
+
   controller_->process_yaw_setpoint();
   controller_->process_xy_setpoint();
   controller_->process_z_setpoint();
-};
+}
 
 void PilotAutoHold2::update(void){
   controller_->attitude_controller_update(rate_output);
@@ -228,9 +345,10 @@ void PilotAutoHold2::update(void){
 }
 
 void PilotAutoHold2::reset(void){
+  modeHasReset = true;
   controller_->attitude_controller_reset();
   controller_->position_controller_reset(controller_->status.alt);
-};
+}
 
 void PilotAutoHold2::output(void){
   controller_->output.x = vel_output.x;
@@ -240,10 +358,30 @@ void PilotAutoHold2::output(void){
   controller_->output.roll = rate_output.x;
   controller_->output.pitch = rate_output.y;
   controller_->output.yaw = rate_output.z;
-};
+}
+
+bool PilotAutoHold2::isNeedResetTarget(void){
+  if(!modeHasReset){  //模式没有重置过，需要重置
+    return true;
+  }
+  geometry_msgs::msg::Point cur_pos = controller_->status.pos;
+  double delta_dist = sqrt(pow(cur_pos.x - last_pos.x, 2)+pow(cur_pos.y - last_pos.y, 2)+ pow(controller_->status.alt - last_pos.z, 2));
+
+  last_pos.x = cur_pos.x;
+  last_pos.y = cur_pos.y;
+  last_pos.z = controller_->status.alt;
+  if(delta_dist>1.0){ //位置突变，需要重置
+    return true;
+  }
+  return false;
+}
 
 /****************路径跟踪1，定深*******************/
 void PilotMission1::setpoint_mapping(void){
+  if(isNeedResetTarget()){
+    reset();
+  }
+
   if(controller_->have_new_track_status){
     controller_->have_new_track_status = false;
 
@@ -259,7 +397,7 @@ void PilotMission1::setpoint_mapping(void){
     controller_->status.track_status = false;   //强制状态为跟踪完成
     controller_->have_new_track_status = true;  //标志有新状态
   }
-};
+}
 
 void PilotMission1::update(void){
   if(controller_->status.track_status){//跟踪进行
@@ -287,6 +425,7 @@ void PilotMission1::update(void){
 }
 
 void PilotMission1::reset(void){
+  modeHasReset = true;
   controller_->attitude_controller_reset();
 
   controller_->position_controller_reset(controller_->status.pos.z);
@@ -329,18 +468,30 @@ void PilotMission1::output(void){
   controller_->output.pitch = rate_output.y;
   controller_->output.yaw   = rate_output.z;
 
+}
 
-  // controller_->output.x = 0.0;
-  // controller_->output.y = 0.0;
-  // controller_->output.z = 0.0;
+bool PilotMission1::isNeedResetTarget(void){
+  if(!modeHasReset){  //模式没有重置过，需要重置
+    return true;
+  }
 
-  // controller_->output.roll  = 0.0;
-  // controller_->output.pitch = 0.0;
-  // controller_->output.yaw   = 0.0;
-};
+  geometry_msgs::msg::Point cur_pos = controller_->status.pos;
+
+  double delta_dist = sqrt(pow(cur_pos.x - last_pos.x, 2)+pow(cur_pos.y - last_pos.y, 2)+ pow(cur_pos.z - last_pos.z, 2));
+  last_pos = cur_pos;
+  if(delta_dist>1.0){ //位置突变，需要重置
+    return true;
+  }
+
+  return false;
+}
 
 /****************路径跟踪2，定高*******************/
 void PilotMission2::setpoint_mapping(void){
+  if(isNeedResetTarget()){
+    reset();
+  }
+
   if(controller_->have_new_track_status){
     controller_->have_new_track_status = false;
 
@@ -356,7 +507,7 @@ void PilotMission2::setpoint_mapping(void){
     controller_->status.track_status = false;   //强制状态为跟踪完成
     controller_->have_new_track_status = true;  //标志有新状态
   }
-};
+}
 
 void PilotMission2::update(void){
   if(controller_->status.track_status){//跟踪进行
@@ -384,6 +535,7 @@ void PilotMission2::update(void){
 }
 
 void PilotMission2::reset(void){
+  modeHasReset = true;
   controller_->attitude_controller_reset();
 
   controller_->position_controller_reset(controller_->status.alt);
@@ -428,6 +580,23 @@ void PilotMission2::output(void){
   controller_->output.pitch = rate_output.y;
   controller_->output.yaw   = rate_output.z;
 
-};
+}
+
+bool PilotMission2::isNeedResetTarget(void){
+  if(!modeHasReset){  //模式没有重置过，需要重置
+    return true;
+  }
+  geometry_msgs::msg::Point cur_pos = controller_->status.pos;
+  double delta_dist = sqrt(pow(cur_pos.x - last_pos.x, 2)+pow(cur_pos.y - last_pos.y, 2)+ pow(controller_->status.alt - last_pos.z, 2));
+
+  last_pos.x = cur_pos.x;
+  last_pos.y = cur_pos.y;
+  last_pos.z = controller_->status.alt;
+  if(delta_dist>1.0){ //位置突变，需要重置
+    return true;
+  }
+  return false;
+}
+
 
 } //end namespace ControllerNS

@@ -89,7 +89,6 @@ namespace ControllerNS{
 #define DEFUALT_ALT_MAX  (20)  //默认高度最大值
 #define DEFUALT_ACCURACY (0.02)  //默认控制精度
 #define DEFUALT_USE_ROLLPITCH (false)  //默认不使用
-#define DEFUALT_USE_IMU2NAVI  (false)  //默认不使用
 #define DEFUALT_REF_ALT (0)  //
 #define DEFUALT_TRACK_ALT_DEPTH (0)  //
 
@@ -133,13 +132,6 @@ typedef struct{
   float yaw;    //航向指令
 }Mtwist_t;
 
-class Init_flag{
-public:
-  bool isInitFinish;  //是否初始化完成，如果一开始是位置模式，需要等待位置消息，防止一开机就跑飞
-  bool isPosCtrl;  //是否是位置控制
-  int posCount;  //位置消息忽略数量，防止一开始的位置不准
-};
-
 typedef struct{
   geometry_msgs::msg::Point angle;   //角度rad
   geometry_msgs::msg::Point rate;    //角速度rad/s
@@ -170,7 +162,6 @@ typedef struct{
   float height_max; //最大高度，由高度计决定
   float ctrl_accuracy;  //控制精度
   bool use_rollpitch_ctrl;  //俯仰滚转角控制，0:不启用，1:启用
-  bool use_imu2navi; //是否使用IMU位置信息导航，0:不使用（使用定位模块的位置信息），1:使用
 }Cfg_t; 
 
 
@@ -245,7 +236,6 @@ public:
   bool follow_direct;  //跟踪的方向，0：前进，1：后退
   bool got_follow_target;  //是否获取跟踪路径，路径跟踪时使用
   bool got_task_target;   //是否获取任务，包括跟踪路径和跟踪目标点，在任务模式时使用。
-  Init_flag init_flag;
 private:
   void controller_init();
   void attitude_controller_init(void);
@@ -265,7 +255,7 @@ private:
   void timer_1HZ_callback();
 
   void TwistCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::TwistCmd& msg);
-  void ImuOdom_callback(const nav_msgs::msg::Odometry& msg);
+  void RovOdom_callback(const nav_msgs::msg::Odometry& msg);
   void Height_callback(const geometry_msgs::msg::PoseWithCovarianceStamped& msg);
   void LocateOdom_callback(const nav_msgs::msg::Odometry& msg);
   void trackCmd_callback(const msg_FollowCmd& msg);
@@ -284,19 +274,12 @@ private:
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr task_finish_publisher; 
 
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>::SharedPtr TwistCmd_subscriber;      //订阅遥控指令
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr imuOdom_subscriber;                //订阅状态数据
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr RovOdom_subscriber;                //订阅状态数据
   rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr height_subscriber;    //订阅高度数据
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber;   //订阅定位模块的位置信息，只使用x、y、和yaw角
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr pathTrackStatus_subscriber;    //订阅路径跟踪状态
   rclcpp::Subscription<msg_FollowCmd>::SharedPtr track_cmd_subscriber;   //订阅路径跟踪模块下发的速度
-  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr imu_twist_subscriber;  //订阅imu的速度
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd>::SharedPtr taskPosCmd_subscriber;  //订阅任务模块的指令
 
-
-  // rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr control_output_publisher; 
-  
-  // void ThruCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::ThruCmd & msg);       
-  // rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::ThruCmd>::SharedPtr ThruCmd_subscriber;           //订阅速度指令
 
 };
 
