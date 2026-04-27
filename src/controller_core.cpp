@@ -52,11 +52,10 @@ Controller::Controller(std::string node_name):Node(node_name){
     "/pure_pursuit_node/path_track_status", 10, std::bind(&Controller::PathTrackStatus_callback, this, _1));       //订阅路径跟踪状态
 
   taskPosCmd_subscriber =  this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd>(
-    "/task/pose_cmd", 10, std::bind(&Controller::taskPoseCmd_callback, this, _1));       //订阅任务
+    "/task/controller_target", 10, std::bind(&Controller::taskPoseCmd_callback, this, _1));       //订阅任务
 
   target_angle_publisher  = this->create_publisher<geometry_msgs::msg::Point>("~/target_angle_deg", 10);
   target_pos_publisher    = this->create_publisher<geometry_msgs::msg::Point>("~/target_pos", 10);
-  task_finish_publisher   = this->create_publisher<std_msgs::msg::Bool>("/task_finish", 10);
   test_publisher    = this->create_publisher<std_msgs::msg::Float32>("~/test_data", 10);
 
 #if PUB_THRUSTER
@@ -1126,12 +1125,6 @@ bool Controller::isTaskFinish(void){
   }
 
   return false;
-}
-
-void Controller::TaskFinishPub(void){
-  std_msgs::msg::Bool Tfinish_status;
-  Tfinish_status.data = true;
-  task_finish_publisher->publish(Tfinish_status);
 }
 
 bool Controller::isPosCtrlMode(int ctrlmod){ //判断是否是位置控制

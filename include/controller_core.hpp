@@ -271,7 +271,6 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::Point>::SharedPtr target_angle_publisher; 
   rclcpp::Publisher<geometry_msgs::msg::Point>::SharedPtr target_pos_publisher; 
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr test_publisher; 
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr task_finish_publisher; 
 
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>::SharedPtr TwistCmd_subscriber;      //订阅遥控指令
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr RovOdom_subscriber;                //订阅状态数据

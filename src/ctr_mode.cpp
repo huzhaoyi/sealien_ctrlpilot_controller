@@ -415,7 +415,6 @@ void PilotMission1::update(void){
 
     if(controller_->got_task_target){  //任务在进行中，需要判断任务是否完成
       if(controller_->isTaskFinish()){
-        controller_->TaskFinishPub();
         controller_->got_task_target = false;
       }
     }
@@ -525,7 +524,6 @@ void PilotMission2::update(void){
 
     if(controller_->got_task_target){  //任务在进行中，需要判断任务是否完成
       if(controller_->isTaskFinish()){
-        controller_->TaskFinishPub();
         controller_->got_task_target = false;
       }
     }

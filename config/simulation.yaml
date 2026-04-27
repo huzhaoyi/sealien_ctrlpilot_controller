@@ -40,17 +40,17 @@ controller:
     y_max: 100000.0 #y方向最大值
     use_rollpitch_ctrl: true #是否使用俯仰滚转角控制，0:不使用，1:使用
    
-    angle_roll_pid_P: 0.1 #roll P
-    angle_roll_pid_I: 0.01 #roll I
+    angle_roll_pid_P: 2.7 #roll P
+    angle_roll_pid_I: 0.05 #roll I
     angle_roll_pid_D: 0.0 #roll D        
-    rate_roll_pid_P: 3.0 #roll rate P
+    rate_roll_pid_P: 0.8 #roll rate P
     rate_roll_pid_I: 0.0 #roll rate I
     rate_roll_pid_D: 0.0 #roll rate D    
 
-    angle_pitch_pid_P: 0.1 #pitch P
-    angle_pitch_pid_I: 0.01 #pitch I
+    angle_pitch_pid_P: 2.7 #pitch P
+    angle_pitch_pid_I: 0.05 #pitch I
     angle_pitch_pid_D: 0.0 #pitch D        
-    rate_pitch_pid_P: 4.0 #pitch rate P
+    rate_pitch_pid_P: 0.8 #pitch rate P
     rate_pitch_pid_I: 0.0 #pitch rate I
     rate_pitch_pid_D: 0.0 #pitch rate D  
 
