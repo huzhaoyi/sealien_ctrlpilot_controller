@@ -46,7 +46,7 @@ Controller::Controller(std::string node_name):Node(node_name){
     "/msg_adapter/sonar/pose", 10, std::bind(&Controller::Height_callback, this, _1));       //订阅高度数据
 
   track_cmd_subscriber = this->create_subscription<msg_FollowCmd>("/pure_pursuit_node/follow_cmd", 10,
-    std::bind(&Controller::trackCmd_callback, this, _1));       //订阅重置参考点指令
+    std::bind(&Controller::trackCmd_callback, this, _1));       
 
   pathTrackStatus_subscriber =  this->create_subscription<std_msgs::msg::Bool>(
     "/pure_pursuit_node/path_track_status", 10, std::bind(&Controller::PathTrackStatus_callback, this, _1));       //订阅路径跟踪状态
