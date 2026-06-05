@@ -64,14 +64,14 @@ controller:
     pos_x_pid_P: 1.8 #x轴位置P
     pos_x_pid_I: 0.0 #x轴位置I
     pos_x_pid_D: 0.0 #x轴位置        
-    vel_x_pid_P: 1.0 #x轴速度P
+    vel_x_pid_P: 2.0 #x轴速度P
     vel_x_pid_I: 0.0 #x轴速度I
     vel_x_pid_D: 0.0 #x轴速度D
 
     pos_y_pid_P: 1.8 #y轴位置P
     pos_y_pid_I: 0.0 #y轴位置I
     pos_y_pid_D: 0.0 #y轴位置        
-    vel_y_pid_P: 1.0 #y轴速度P
+    vel_y_pid_P: 2.0 #y轴速度P
     vel_y_pid_I: 0.0 #y轴速度I
     vel_y_pid_D: 0.0 #y轴速度D
 
