@@ -27,6 +27,12 @@
 #include "sealien_ctrlpilot_msgmanagement/msg/follow_cmd.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/gs_cmd.hpp"
 
+#include "sealien_ctrlpilot_msgmanagement/msg/wire_displacement_status.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/pitch_motor_cmd.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/plunger_pump_cmd.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/switch_cmd.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/switch_status.hpp"
+
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "sealien_ctrlpilot_msgmanagement/action/percent_target.hpp"
 
@@ -86,6 +92,12 @@ typedef struct{
   geometry_msgs::msg::Point pos;     //位置m
   geometry_msgs::msg::Point vel;     //速度m/s
   bool get_status;  //是否获得状态标志量，0:未获得， 1:获得
+
+  float sensor_displace_oilbladder;  //油囊拉线传感器位移，单位%
+  float sensor_displace_pitchmotor;  //俯仰电机拉线传感器位移，单位%
+  bool valve1_status;   //阀1状态，false:关， true:开
+  bool valve2_status;   //阀2状态，false:关， true:开
+
 }Status_t;
 
 class CtrModeBase;
@@ -93,6 +105,7 @@ class CtrModeBase;
 class Controller : public rclcpp::Node{
 public:
   using PercentTarget = sealien_ctrlpilot_msgmanagement::action::PercentTarget;
+  using GoalHandlePercentTarget = rclcpp_action::ServerGoalHandle<PercentTarget>;
   using msg_FollowCmd = sealien_ctrlpilot_msgmanagement::msg::FollowCmd;
 
   Controller(std::string node_name);
@@ -136,6 +149,19 @@ private:
   void LocateOdom_callback(const nav_msgs::msg::Odometry& msg);
   void trackCmd_callback(const msg_FollowCmd& msg);
 
+  void displacement_callback(const sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus& msg);
+  void Switchs_callback(const sealien_ctrlpilot_msgmanagement::msg::SwitchStatus& msg);
+
+  rclcpp_action::GoalResponse oilBladder_handle_goal(const rclcpp_action::GoalUUID& uuid, std::shared_ptr<const PercentTarget::Goal> goal);
+  rclcpp_action::CancelResponse oilBladder_handle_cancel(const std::shared_ptr<GoalHandlePercentTarget> goal_handle);
+  void oilBladder_handle_accepted(const std::shared_ptr<GoalHandlePercentTarget> goal_handle);
+  void oilBladder_execute(const std::shared_ptr<GoalHandlePercentTarget> goal_handle);
+
+  rclcpp_action::GoalResponse pitchMotor_handle_goal(const rclcpp_action::GoalUUID& uuid, std::shared_ptr<const PercentTarget::Goal> goal);
+  rclcpp_action::CancelResponse pitchMotor_handle_cancel(const std::shared_ptr<GoalHandlePercentTarget> goal_handle);
+  void pitchMotor_handle_accepted(const std::shared_ptr<GoalHandlePercentTarget> goal_handle);
+  void pitchMotor_execute(const std::shared_ptr<GoalHandlePercentTarget> goal_handle);
+
   rclcpp::TimerBase::SharedPtr timer_cycle_20HZ;
   rclcpp::TimerBase::SharedPtr timer_cycle_1HZ;
 
@@ -143,9 +169,16 @@ private:
   rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCmd>::SharedPtr thru_cmd_publisher; 
   rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::GsCmd>::SharedPtr gs_cmd_publisher; 
 
+  rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::PitchMotorCmd>::SharedPtr pitch_cmd_publisher; 
+  rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::PlungerPumpCmd>::SharedPtr pump_cmd_publisher; 
+  rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::SwitchCmd>::SharedPtr switch_cmd_publisher; 
+
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>::SharedPtr TwistCmd_subscriber;      //订阅遥控指令
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr RovOdom_subscriber;                //订阅状态数据
   rclcpp::Subscription<msg_FollowCmd>::SharedPtr track_cmd_subscriber;   //订阅路径跟踪模块下发的速度
+
+  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus>::SharedPtr displacement_status_subscriber;   
+  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::SwitchStatus>::SharedPtr valve_status_subscriber;   
 
   rclcpp_action::Server<PercentTarget>::SharedPtr oilBladder_server_;  //油囊
   rclcpp_action::Server<PercentTarget>::SharedPtr pitchMotor_server_;  //俯仰舵机

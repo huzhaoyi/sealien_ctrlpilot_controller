@@ -12,7 +12,7 @@
 
 namespace ControllerNS{
 
-using std::placeholders::_1;
+using namespace std::placeholders;
 /********************************************************************************
  * @brief  :构造函数
  * @param  :NONE
@@ -28,10 +28,31 @@ Controller::Controller(std::string node_name):Node(node_name){
     "/msg_adapter/rov_odom", 10, std::bind(&Controller::RovOdom_callback, this, _1));       //订阅状态数据
 
   track_cmd_subscriber = this->create_subscription<msg_FollowCmd>("/pure_pursuit_node/follow_cmd", 10,
-    std::bind(&Controller::trackCmd_callback, this, _1));       
+    std::bind(&Controller::trackCmd_callback, this, _1));   
+    
+  displacement_status_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus>("/WireDisplacementStatus", 10,
+  std::bind(&Controller::displacement_callback, this, _1)); 
+
+  valve_status_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::SwitchStatus>("/switch_status", 10,
+  std::bind(&Controller::Switchs_callback, this, _1)); 
+
+ 
+  // 创建Action服务器
+  oilBladder_server_= rclcpp_action::create_server<PercentTarget>(this,"/oil_bladder_target",
+  std::bind(&Controller::oilBladder_handle_goal, this, _1, _2),
+  std::bind(&Controller::oilBladder_handle_cancel, this, _1),
+  std::bind(&Controller::oilBladder_handle_accepted, this, _1));
+
+  pitchMotor_server_= rclcpp_action::create_server<PercentTarget>(this,"/pitch_motor_target",
+  std::bind(&Controller::pitchMotor_handle_goal, this, _1, _2),
+  std::bind(&Controller::pitchMotor_handle_cancel, this, _1),
+  std::bind(&Controller::pitchMotor_handle_accepted, this, _1));
 
   thru_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCmd>("~/thruster_cmd", 10); 
   gs_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::GsCmd>("~/gs_cmd", 10); 
+  pitch_cmd_publisher   = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::PitchMotorCmd>("~/pitch_motor_cmd", 10); 
+  pump_cmd_publisher    = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::PlungerPumpCmd>("~/pump_cmd", 10); 
+  switch_cmd_publisher  = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::SwitchCmd>("~/switch_cmd", 10); 
 
 
   timer_cycle_20HZ = this->create_wall_timer(std::chrono::milliseconds((uint32_t)(1000*dt)), std::bind(&Controller::timer_20HZ_callback, this));
@@ -78,6 +99,11 @@ void Controller::controller_init(){
   twist_cmd.ctrl_mode   = DEFUALT_PILOT_MODE;  //初始控制模式
   twist_cmd.lock_status = DEFUALT_LOCK_STATUS; //默认上锁
   status.get_status = false; //未获得状态量
+
+  status.sensor_displace_oilbladder = 0.0;  //油囊拉线传感器位移，单位%
+  status.sensor_displace_pitchmotor = 0.0;  //俯仰电机拉线传感器位移，单位%
+  status.valve1_status = false;   //阀1状态，0:关， 1:开
+  status.valve2_status = false;   //阀2状态，0:关， 1:开
 
   this->declare_parameter<int>("gs1_dir", 1);
   this->declare_parameter<int>("gs2_dir", 1);
@@ -274,6 +300,17 @@ void Controller::trackCmd_callback(const msg_FollowCmd& msg){
   target_cmd.yaw_rate     = msg.twist.twist.angular.z;
 }
 
+void Controller::displacement_callback(const sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus& msg){
+  status.sensor_displace_oilbladder = msg.displacement_mm[0]*100/250;
+  status.sensor_displace_pitchmotor = msg.displacement_mm[1]*100/250;
+  //转换成百分比
+}
+
+void Controller::Switchs_callback(const sealien_ctrlpilot_msgmanagement::msg::SwitchStatus& msg){
+  status.valve1_status = msg.switch_status.at(0)? true:false;   //阀1状态，false:关， true:开
+  status.valve2_status = msg.switch_status.at(1)? true:false;   //阀2状态，false:关， true:开
+}
+
 void Controller::RovOdom_callback(const nav_msgs::msg::Odometry& msg){
 
   double roll, pitch, yaw;  //rad
@@ -357,6 +394,7 @@ bool Controller::isModelegal(int ctrlmod){ //判断模式是否合法，是返�
     return false;
   }
 }
+
 
 } //end namespace ControllerNS
 
