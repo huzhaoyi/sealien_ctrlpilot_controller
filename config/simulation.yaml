@@ -1,84 +1,34 @@
 ### controller config file ###
 controller:
   ros__parameters:
-    angle_roll_integration_limit: 1.0  #滚转角度积分限幅
     angle_pitch_integration_limit: 1.0 #俯仰角度积分限幅
-    angle_yaw_integration_limit: 1.0 #艏向角度积分限幅
-    rate_roll_integration_limit: 1.0 #滚转角速率度积分限幅
-    rate_yaw_integration_limit: 1.0 #艏向角速率积分限幅     
-    angle_roll_output_limit: 1.0 #滚转角度PID输出限幅
-    angle_pitch_output_limit: 1.0 #滚转角度PID输出限幅
-    angle_yaw_output_limit: 1.0 #艏向角度PID输出限幅        
-    rate_roll_output_limit: 1.0 #滚转角速度PID输出限幅
-    rate_pitch_output_limit: 1.0 #俯仰角速度PID输出限幅
-    rate_yaw_output_limit: 1.0 #艏向角速度PID输出限幅       
-    pos_x_integration_limit: 1.0 #x轴位置积分限幅
-    pos_y_integration_limit: 1.0 #y轴位置积分限幅
-    pos_z_integration_limit: 1.0 #z轴位置积分限幅       
-    vel_x_integration_limit: 1.0 #x轴速度积分限幅
-    vel_y_integration_limit: 1.0 #y轴速度积分限幅
-    vel_z_integration_limit: 1.0 #z轴速度积分限幅       
-    pos_x_output_limit: 3.0 #x轴位置PID输出限幅
-    pos_y_output_limit: 3.0 #y轴位置PID输出限幅
-    pos_z_output_limit: 2.0 #z轴位置PID输出限幅     
-    vel_x_output_limit: 1.0 #x轴速度PID输出限幅
-    vel_y_output_limit: 1.0 #y轴速度PID输出限幅
-    vel_z_output_limit: 1.0 #z轴速度PID输出限幅
-    height_min: 0.0 #高度最小值，由高度计决定
-    height_max: 50.0 #高度最大值，由高度计决定
-    ctrl_accuracy: 0.0 #控制精度，单位m
-    dt: 0.02 #控制周期0.05S(20HZ)，非必要不修改
-    yaw_gain: 0.01 #航向遥控器增益
-    z_gain: 0.03 #垂向遥控器增益
-    xy_gain: 0.03 #垂向遥控器增益
-    yaw_limit: 3.1415926 #定向模式时，角度限幅，范围是正负，单位是（rad）
-    depth_min: -500.0 #深度最小值，向下为负
-    depth_max: 0.0 #深度最大值，向下为 
-    x_min: -100000.0 #x方向最小值
-    x_max: 100000.0 #x方向最大值
-    y_min: -100000.0 #y方向最小值
-    y_max: 100000.0 #y方向最大值
-    use_rollpitch_ctrl: true #是否使用俯仰滚转角控制，0:不使用，1:使用
-   
-    angle_roll_pid_P: 2.7 #roll P
-    angle_roll_pid_I: 0.05 #roll I
-    angle_roll_pid_D: 0.0 #roll D        
-    rate_roll_pid_P: 0.8 #roll rate P
-    rate_roll_pid_I: 0.0 #roll rate I
-    rate_roll_pid_D: 0.0 #roll rate D    
+    rate_pitch_integration_limit: 1.0 #俯仰角速率积分限幅 
+    rate_yaw_integration_limit: 1.0 #艏向角速率积分限幅  
+    vel_x_integration_limit: 1.0 #
 
-    angle_pitch_pid_P: 2.7 #pitch P
-    angle_pitch_pid_I: 0.05 #pitch I
+    angle_pitch_output_limit: 1.0 #滚转角度PID输出限幅
+    rate_pitch_output_limit: 1.0 #俯仰角速度PID输出限幅
+    rate_yaw_output_limit: 1.0 #艏向角速度PID输出限幅 
+    vel_x_output_limit: 1.0 
+         
+    dt: 0.05 #控制周期0.05S(20HZ)，非必要不修改
+
+    angle_pitch_pid_P: 0.01 #pitch P
+    angle_pitch_pid_I: 0.01 #pitch I
     angle_pitch_pid_D: 0.0 #pitch D        
-    rate_pitch_pid_P: 0.8 #pitch rate P
+    rate_pitch_pid_P: 1.0 #pitch rate P
     rate_pitch_pid_I: 0.0 #pitch rate I
     rate_pitch_pid_D: 0.0 #pitch rate D  
-
-    angle_yaw_pid_P: 2.7 #航向角P
-    angle_yaw_pid_I: 0.0 #航向角I
-    angle_yaw_pid_D: 0.0 #航向角 D       
-    rate_yaw_pid_P: 0.8 #航向角速度P
+    
+    rate_yaw_pid_P: 1.0 #航向角速度P
     rate_yaw_pid_I: 0.0 #航向角速度I
     rate_yaw_pid_D: 0.0 #航向角速度D    
     
-    pos_x_pid_P: 1.8 #x轴位置P
-    pos_x_pid_I: 0.0 #x轴位置I
-    pos_x_pid_D: 0.0 #x轴位置        
-    vel_x_pid_P: 2.0 #x轴速度P
+    vel_x_pid_P: 1.5 #x轴速度P
     vel_x_pid_I: 0.0 #x轴速度I
-    vel_x_pid_D: 0.0 #x轴速度D
+    vel_x_pid_D: 0.01 #x轴速度D
 
-    pos_y_pid_P: 1.8 #y轴位置P
-    pos_y_pid_I: 0.0 #y轴位置I
-    pos_y_pid_D: 0.0 #y轴位置        
-    vel_y_pid_P: 2.0 #y轴速度P
-    vel_y_pid_I: 0.0 #y轴速度I
-    vel_y_pid_D: 0.0 #y轴速度D
-
-    pos_z_pid_P: 3.5 #z轴位置P
-    pos_z_pid_I: 0.1 #z轴位置I
-    pos_z_pid_D: 0.0 #z轴位置        
-    vel_z_pid_P: 1.8 #z轴速度P
-    vel_z_pid_I: 0.0 #z轴速度I
-    vel_z_pid_D: 0.0 #z轴速度D
-
+    gs1_dir: -1   #舵机方向--水平1
+    gs2_dir: 1    #舵机方向--水平2
+    gs3_dir: 1    #舵机方向--垂直1
+    gs4_dir: -1   #舵机方向--垂直2
