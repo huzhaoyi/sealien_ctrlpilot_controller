@@ -53,7 +53,8 @@ Controller::Controller(std::string node_name):Node(node_name){
   pitch_cmd_publisher   = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::PitchMotorCmd>("~/pitch_motor_cmd", 10); 
   pump_cmd_publisher    = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::PlungerPumpCmd>("~/pump_cmd", 10); 
   switch_cmd_publisher  = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::SwitchCmd>("~/switch_cmd", 10); 
-
+  pid_output_publisher  = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd>("~/pid_output_cmd", 10); 
+  gs_output_publisher   = this->create_publisher<std_msgs::msg::Float32MultiArray>("~/gs_cmd_output", 10); 
 
   timer_cycle_20HZ = this->create_wall_timer(std::chrono::milliseconds((uint32_t)(1000*dt)), std::bind(&Controller::timer_20HZ_callback, this));
   timer_cycle_1HZ = this->create_wall_timer(std::chrono::milliseconds((uint32_t)(1000)), std::bind(&Controller::timer_1HZ_callback, this));
@@ -171,13 +172,14 @@ void Controller::controller_init(){
   float rate_yaw_pid_I = this->get_parameter("rate_yaw_pid_I").as_double(); 
   float rate_yaw_pid_D   = this->get_parameter("rate_yaw_pid_D").as_double(); 
 
-
   pid_angle_pitch.init(angle_pitch_pid_P , angle_pitch_pid_I, angle_pitch_pid_D, 
                     angle_pitch_integration_limit, angle_pitch_output_limit, dt);
   pid_rate_pitch.init(rate_pitch_pid_P , rate_pitch_pid_I, rate_pitch_pid_D, 
                   rate_pitch_integration_limit, rate_pitch_output_limit, dt);
   pid_rate_yaw.init(rate_yaw_pid_P , rate_yaw_pid_I, rate_yaw_pid_D, 
                   rate_yaw_integration_limit, rate_yaw_output_limit, dt);
+
+  RCLCPP_INFO(this->get_logger(), "rate_yawP[%f], rate_yawI[%f], rate_yawD[%f]", pid_rate_yaw.kp,pid_rate_yaw.ki,pid_rate_yaw.kd);
 
 
   this->declare_parameter<double>("vel_x_integration_limit", PID_VELOCITY_X_INTEGRATION_LIMIT);
@@ -296,7 +298,7 @@ void Controller::TwistCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::T
 
 void Controller::trackCmd_callback(const msg_FollowCmd& msg){
   target_cmd.velx         = msg.twist.twist.linear.x;
-  target_cmd.pitch_angle  = msg.twist.twist.linear.z;
+  target_cmd.pitch_angle  = msg.twist.twist.linear.z; //这里msg.twist.twist.linear.z表示的是俯仰目标角度
   target_cmd.yaw_rate     = msg.twist.twist.angular.z;
 }
 
@@ -353,6 +355,9 @@ void Controller::RovOdom_callback(const nav_msgs::msg::Odometry& msg){
 void Controller::Thru_Cmd_Mix(void){
   sealien_ctrlpilot_msgmanagement::msg::ThrusterCmd thru;
   sealien_ctrlpilot_msgmanagement::msg::GsCmd gs_send;
+  sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd pid_output;
+  std_msgs::msg::Float32MultiArray gs_cmd_output;
+
   float gscmd[4]; //0,1是水平舵机，2、3是垂直舵机
 
   if(twist_cmd.lock_status){  //上锁后油门归中位。解锁才计算
@@ -364,12 +369,24 @@ void Controller::Thru_Cmd_Mix(void){
   }else{
     thru.thru1 = (uint16_t)(output.x*500 + 1500);
 
-    gscmd[0] =  gs1_dir*output.pitch * MAX_GS_ANGLE;
-    gscmd[1] =  gs2_dir*output.pitch * MAX_GS_ANGLE;
+    if(fabs(output.x)< 0.05){
+      gscmd[0] =  0.0;
+      gscmd[1] =  0.0;
+      gscmd[2] =  0.0;
+      gscmd[3] =  0.0;
 
-    gscmd[2] =  gs3_dir*output.yaw * MAX_GS_ANGLE;
-    gscmd[3] =  gs4_dir*output.yaw * MAX_GS_ANGLE;
+      //积分清零，防止停止时舵面还有积分量。
+      pid_angle_pitch.integ = 0.0;
+      pid_rate_pitch.integ  = 0.0;
+      pid_rate_yaw.integ    = 0.0;
 
+    }else{
+      gscmd[0] =  gs1_dir*output.pitch * MAX_GS_ANGLE;
+      gscmd[1] =  gs2_dir*output.pitch * MAX_GS_ANGLE;
+
+      gscmd[2] =  gs3_dir*output.yaw * MAX_GS_ANGLE;
+      gscmd[3] =  gs4_dir*output.yaw * MAX_GS_ANGLE;
+    }
   }
 
   thru_cmd_publisher->publish(thru);
@@ -380,6 +397,21 @@ void Controller::Thru_Cmd_Mix(void){
     gs_cmd_publisher->publish(gs_send);
   }
 
+  pid_output.x = output.x;
+  pid_output.y = output.y;
+  pid_output.z = output.z;
+  pid_output.roll   = output.roll;
+  pid_output.pitch  = output.pitch;
+  pid_output.yaw    = output.yaw;
+
+  pid_output_publisher->publish(pid_output);
+
+
+  for(int i=0; i<4; i++){
+    gs_cmd_output.data.push_back(gscmd[i]);
+  }
+
+  gs_output_publisher->publish(gs_cmd_output);
 }
 
 /********************************************************************************

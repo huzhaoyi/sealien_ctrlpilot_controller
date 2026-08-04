@@ -13,20 +13,20 @@ controller:
          
     dt: 0.05 #控制周期0.05S(20HZ)，非必要不修改
 
-    angle_pitch_pid_P: 0.01 #pitch P
-    angle_pitch_pid_I: 0.01 #pitch I
+    angle_pitch_pid_P: 1.0 #pitch P
+    angle_pitch_pid_I: 0.1 #pitch I
     angle_pitch_pid_D: 0.0 #pitch D        
-    rate_pitch_pid_P: 1.0 #pitch rate P
-    rate_pitch_pid_I: 0.0 #pitch rate I
+    rate_pitch_pid_P: 2.0 #pitch rate P
+    rate_pitch_pid_I: 0.1 #pitch rate I
     rate_pitch_pid_D: 0.0 #pitch rate D  
     
-    rate_yaw_pid_P: 1.0 #航向角速度P
-    rate_yaw_pid_I: 0.0 #航向角速度I
+    rate_yaw_pid_P: 25.0 #航向角速度P
+    rate_yaw_pid_I: 2.0 #航向角速度I
     rate_yaw_pid_D: 0.0 #航向角速度D    
     
-    vel_x_pid_P: 1.5 #x轴速度P
-    vel_x_pid_I: 0.0 #x轴速度I
-    vel_x_pid_D: 0.01 #x轴速度D
+    vel_x_pid_P: 5.5 #x轴速度P
+    vel_x_pid_I: 0.5 #x轴速度I
+    vel_x_pid_D: 0.0 #x轴速度D
 
     gs1_dir: -1   #舵机方向--水平1
     gs2_dir: 1    #舵机方向--水平2

@@ -21,6 +21,7 @@
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include "std_msgs/msg/float32_multi_array.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/twist_cmd.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/thruster_cmd.hpp"
@@ -32,6 +33,7 @@
 #include "sealien_ctrlpilot_msgmanagement/msg/plunger_pump_cmd.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/switch_cmd.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/switch_status.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/task_pos_cmd.hpp"
 
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "sealien_ctrlpilot_msgmanagement/action/percent_target.hpp"
@@ -121,7 +123,7 @@ public:
   Status_t status;   //当前状态
   Mtwist_t output;     //控制器输出
   Target_t target_cmd;  //制动控制时的指令
-  sealien_ctrlpilot_msgmanagement::msg::TwistCmd twist_cmd; //直接从遥控器读到的操纵数据，四个操纵两,模式，锁状态
+  sealien_ctrlpilot_msgmanagement::msg::TwistCmd twist_cmd; //直接从遥控器读到的操纵数据，四个操纵量,模式，锁状态
 
   std::map<int, std::shared_ptr<CtrModeBase>> ModeMap;
   bool follow_direct;  //跟踪的方向，0：前进，1：后退
@@ -172,6 +174,8 @@ private:
   rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::PitchMotorCmd>::SharedPtr pitch_cmd_publisher; 
   rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::PlungerPumpCmd>::SharedPtr pump_cmd_publisher; 
   rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::SwitchCmd>::SharedPtr switch_cmd_publisher; 
+  rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd>::SharedPtr pid_output_publisher;  //for debug
+  rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr gs_output_publisher;  //for debug
 
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>::SharedPtr TwistCmd_subscriber;      //订阅遥控指令
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr RovOdom_subscriber;                //订阅状态数据

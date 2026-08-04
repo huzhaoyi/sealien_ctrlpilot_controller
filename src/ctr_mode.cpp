@@ -77,8 +77,6 @@ void PilotMission::update(void){
   //航向
   yaw_rate_error = controller_->target_cmd.yaw_rate - controller_->status.rate.z;
   rate_output.z = controller_->pid_rate_yaw.pid_update(yaw_rate_error);
-
-
 }
 
 void PilotMission::reset(void){
@@ -94,7 +92,7 @@ void PilotMission::output(void){
   controller_->output.z = vel_output.z;
 
   controller_->output.roll  = rate_output.x;
-  controller_->output.pitch = rate_output.y;
+  controller_->output.pitch = -rate_output.y;
   controller_->output.yaw   = rate_output.z;
 
 }
