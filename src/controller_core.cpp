@@ -278,7 +278,8 @@ void Controller::clear_output(void){
 void Controller::TwistCmd_callback(const sealien_ctrlpilot_msgmanagement::msg::TwistCmd& msg){
   //判断模式是否合法，不合法就强制为NONE模式，防止内存访问越界
   if(isModelegal(msg.ctrl_mode)){  
-    twist_cmd.x = (msg.x+1)/2.0;  //规范到0-1
+    // twist_cmd.x = (msg.x+1)/2.0;  //规范到0-1
+    twist_cmd.x = msg.x;  //规范到0-1
     twist_cmd.y = msg.y;
     twist_cmd.z = msg.z;
     twist_cmd.roll  = msg.roll;
