@@ -1,0 +1,167 @@
+<?xml version="1.0"?>
+<robot name="ROV">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.6 0.1 0.2"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="red">
+        <color rgba="1 0 0 1"/> <!-- 红色，不透明 -->
+      </material>
+    </visual>
+  </link>
+
+  <!--深度计-->
+  <link name="sensor_depth">
+    <visual>
+      <geometry>
+        <box size="0.6 0.1 0.2"/>
+      </geometry>
+      <origin rpy="3.1415926 0 0" xyz="0 0 0"/>
+      <material name="red">
+        <color rgba="1 0 0 1"/> <!-- 红色，不透明 -->
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_depth" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_depth"/>
+    <origin rpy="0 0 0" xyz="-0.06 -0.3 -0.04"/>
+  </joint>
+
+  <!--高度声呐-->
+  <link name="sensor_sonar">
+    <visual>
+      <geometry>
+        <box size="0.6 0.1 0.2"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="red">
+        <color rgba="1 0 0 1"/> <!-- 红色，不透明 -->
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_sonar" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_sonar"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+
+  <!--图像声呐-->
+  <link name="sensor_imagsonar">
+    <visual>
+      <geometry>
+        <box size="0.6 0.1 0.2"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="red">
+        <color rgba="1 0 0 1"/> <!-- 红色，不透明 -->
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_imagsonar" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_imagsonar"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+
+  <!--imu-->
+  <link name="sensor_imu">
+    <visual>
+      <geometry>
+        <box size="0.6 0.1 0.2"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="red">
+        <color rgba="1 0 0 1"/> <!-- 红色，不透明 -->
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_imu" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_imu"/>
+    <origin rpy="0 0 0" xyz="0.3 0 -0.17"/>
+  </joint>
+
+  <!--dvl-->
+  <link name="sensor_dvl">
+    <visual>
+      <geometry>
+        <box size="0.6 0.1 0.2"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="red">
+        <color rgba="1 0 0 1"/> <!-- 红色，不透明 -->
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_dvl" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_dvl"/>
+    <origin rpy="0 0 -1.5707963" xyz="0 0.26 -0.24"/>
+  </joint>
+
+  <!--camera1-->
+  <link name="sensor_camera1">
+    <visual>
+      <geometry>
+        <box size="0.6 0.1 0.2"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="red">
+        <color rgba="1 0 0 1"/> <!-- 红色，不透明 -->
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_camera1" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_camera1"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+
+  <!--camera2-->
+  <link name="sensor_camera2">
+    <visual>
+      <geometry>
+        <box size="0.6 0.1 0.2"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="red">
+        <color rgba="1 0 0 1"/> <!-- 红色，不透明 -->
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_camera2" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_camera2"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+
+  <!-- 机械臂 -->
+  <link name="sensor_roboticarm">
+    <visual>
+      <geometry>
+        <box size="0.6 0.1 0.2"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <material name="red">
+        <color rgba="1 0 0 1"/> 
+      </material>
+    </visual>
+  </link>
+
+  <joint name="joint_roboticarm" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_roboticarm"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+
+</robot>

@@ -46,19 +46,34 @@ ament_target_dependencies(controller
   nav_msgs
   sensor_msgs)
 
+add_executable(msg_adapter_node
+              src/msgs_adapter_node.cpp)
+target_link_libraries(msg_adapter_node libyaml-cpp.a)
+ament_target_dependencies(msg_adapter_node 
+  rclcpp 
+  std_msgs 
+  geometry_msgs 
+  sealien_ctrlpilot_msgmanagement
+  tf2_geometry_msgs
+  tf2_msgs
+  tf2
+  GeographicLib
+  nav_msgs
+  sensor_msgs)
+
 
 install(TARGETS 
   controller
+  msg_adapter_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
 # Install config files
-install(DIRECTORY launch/
-  DESTINATION share/${PROJECT_NAME}/launch
-)
-
-install(DIRECTORY config/
-  DESTINATION share/${PROJECT_NAME}/config
+install(DIRECTORY 
+  launch
+  urdf
+  config
+  DESTINATION share/${PROJECT_NAME}
 )
 
 ament_package()

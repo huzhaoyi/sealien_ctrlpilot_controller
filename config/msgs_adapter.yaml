@@ -1,0 +1,10 @@
+### adapter config file ###
+msgs_adapter_node:
+  ros__parameters:
+    ref_lat: 22.802772814984245
+    ref_lon: 113.5257501592029
+    ref_alt: 0.0
+
+
+
+
