@@ -24,7 +24,7 @@
 #include "std_msgs/msg/float32_multi_array.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/twist_cmd.hpp"
-#include "sealien_ctrlpilot_msgmanagement/msg/thruster_cmd.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/thruster_command.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/follow_cmd.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/gs_cmd.hpp"
 
@@ -168,7 +168,7 @@ private:
   rclcpp::TimerBase::SharedPtr timer_cycle_1HZ;
 
   rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>::SharedPtr control_output_publisher; 
-  rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCmd>::SharedPtr thru_cmd_publisher; 
+  rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCommand>::SharedPtr thru_cmd_publisher; 
   rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::GsCmd>::SharedPtr gs_cmd_publisher; 
 
   rclcpp::Publisher<sealien_ctrlpilot_msgmanagement::msg::PitchMotorCmd>::SharedPtr pitch_cmd_publisher; 

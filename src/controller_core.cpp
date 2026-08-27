@@ -48,7 +48,7 @@ Controller::Controller(std::string node_name):Node(node_name){
   std::bind(&Controller::pitchMotor_handle_cancel, this, _1),
   std::bind(&Controller::pitchMotor_handle_accepted, this, _1));
 
-  thru_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCmd>("~/thruster_cmd", 10); 
+  thru_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCommand>("/ThrusterCommand", 10); 
   gs_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::GsCmd>("~/gs_cmd", 10); 
   pitch_cmd_publisher   = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::PitchMotorCmd>("~/pitch_motor_cmd", 10); 
   pump_cmd_publisher    = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::PlungerPumpCmd>("~/pump_cmd", 10); 
@@ -354,7 +354,7 @@ void Controller::RovOdom_callback(const nav_msgs::msg::Odometry& msg){
  * @return :NONE
  *********************************************************************************/
 void Controller::Thru_Cmd_Mix(void){
-  sealien_ctrlpilot_msgmanagement::msg::ThrusterCmd thru;
+  sealien_ctrlpilot_msgmanagement::msg::ThrusterCommand thru;
   sealien_ctrlpilot_msgmanagement::msg::GsCmd gs_send;
   sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd pid_output;
   std_msgs::msg::Float32MultiArray gs_cmd_output;
@@ -362,13 +362,13 @@ void Controller::Thru_Cmd_Mix(void){
   float gscmd[4]; //0,1是水平舵机，2、3是垂直舵机
 
   if(twist_cmd.lock_status){  //上锁后油门归中位。解锁才计算
-    thru.thru1 = 1500;    //范围1000-2000，其中1500是中位
+    thru.thrusts[0] = 1500;    //范围1000-2000，其中1500是中位
     gscmd[0] = 0.0;
     gscmd[1] = 0.0;
     gscmd[2] = 0.0;
     gscmd[3] = 0.0;
   }else{
-    thru.thru1 = (uint16_t)(output.x*500 + 1500);
+    thru.thrusts[0] = (uint16_t)(output.x*500 + 1500);
 
     if(fabs(output.x)< 0.05){
       gscmd[0] =  0.0;
