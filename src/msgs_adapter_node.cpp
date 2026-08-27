@@ -117,9 +117,9 @@ void MsgAdapter::imu_callback(const sealien_ctrlpilot_msgmanagement::msg::Elb105
 
   rov_odom.pose.pose.orientation = tf2::toMsg(quat);
   
-  rov_odom.twist.twist.angular.x = msg.gyro_x_radps;
-  rov_odom.twist.twist.angular.y = msg.gyro_y_radps;
-  rov_odom.twist.twist.angular.z = msg.gyro_z_radps;
+  rov_odom.twist.twist.angular.x = msg.gyro_x_degps/RAD2DEG;
+  rov_odom.twist.twist.angular.y = msg.gyro_y_degps/RAD2DEG;
+  rov_odom.twist.twist.angular.z = msg.gyro_z_degps/RAD2DEG;
 
   rov_odom.twist.twist.linear.x = msg.dvl_water_front_mps;
   rov_odom.twist.twist.linear.y = msg.dvl_water_right_mps;
@@ -161,7 +161,7 @@ void MsgAdapter::imu_callback(const sealien_ctrlpilot_msgmanagement::msg::Elb105
  * @return NONE
 *********************************************************************************/
 void MsgAdapter::depth_callback(const sealien_ctrlpilot_msgmanagement::msg::DepthStatus& msg){
-  rov_odom.pose.pose.position.z = msg.depth_m[0];
+  rov_odom.pose.pose.position.z = -msg.depth_m[0];
 }
 
 
