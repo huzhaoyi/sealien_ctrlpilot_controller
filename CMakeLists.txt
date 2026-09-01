@@ -76,5 +76,16 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(PROGRAMS
+  scripts/ctrl_bringup.sh
+  scripts/auv_stack.sh
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(FILES
+  systemd/ctrl_bringup.service
+  DESTINATION share/${PROJECT_NAME}/systemd
+)
+
 ament_package()
 

@@ -59,7 +59,10 @@ namespace ControllerNS{
 #define DEFUALT_PILOT_MODE  (0)
 #define DEFUALT_LOCK_STATUS (1)
 
-#define MAX_GS_ANGLE (45.0)   //舵机范围±45°
+#define MAX_GS_ANGLE (44.0f)          // 指令软限幅，躲开机械硬限位±45°
+#define GS_CMD_CHANGE_DEG (0.5f)      // 角度变化超过该值才下发
+#define GS_CMD_HEARTBEAT_CYCLES (20)  // 无变化时约1s(20Hz)补发一次当前角
+#define GS_CMD_SPEED_DPS (20.0f)      // 舵机额定转速 deg/s
 
 #define LIMIT(x, min, max)   (x<min? min:(x>max? max:x))
 #define DEADZONE(x, down, up) (x<down? x:(x>up? x:0))
@@ -137,6 +140,11 @@ private:
   bool isModelegal(int ctrlmod);
   void controller_init();
   void Thru_Cmd_Mix(void);
+  void publish_gs_cmd_round_robin(const float gscmd[4]);
+
+  float last_gs_cmd_sent_[4];   // 上次实际下发角度
+  int gs_rr_index_;             // 轮转通道 0..3
+  int gs_cycles_since_sent_[4]; // 各通道距上次下发的周期数
 
   void controller_mode_sw(void);
   void control_output(void);

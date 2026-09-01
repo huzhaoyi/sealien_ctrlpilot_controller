@@ -31,7 +31,7 @@ MsgAdapter::MsgAdapter() : Node("msg_adapter_node") {
     "/elb105/shzr04", 10, std::bind(&MsgAdapter::imu_callback, this, _1));       //订阅imu数据，这里默认包含DVL数据，如果dvl与IMU数据是分离的，需要增加订阅dvl的内容
 
   depth_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::DepthStatus>(
-    "DepthStatus", 10, std::bind(&MsgAdapter::depth_callback, this, _1));       //订阅深度计数据
+    "/DepthStatus", 10, std::bind(&MsgAdapter::depth_callback, this, _1));       //订阅深度计数据
 
   resetRef_subscriber = this->create_subscription<std_msgs::msg::Bool>("~/resetRef", 10,
      std::bind(&MsgAdapter::resetRef_callback, this, _1));       //订阅重置参考点指令
@@ -171,7 +171,9 @@ void MsgAdapter::depth_callback(const sealien_ctrlpilot_msgmanagement::msg::Dept
  * @return NONE
 *********************************************************************************/
 void MsgAdapter::resetRef_callback(const std_msgs::msg::Bool& msg){
-  restRef_flag = true;
+  if(msg.data){
+    restRef_flag = true;
+  }
 }
 
 /********************************************************************************

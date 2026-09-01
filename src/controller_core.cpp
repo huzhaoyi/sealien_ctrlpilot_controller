@@ -33,7 +33,7 @@ Controller::Controller(std::string node_name):Node(node_name){
   displacement_status_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus>("/WireDisplacementStatus", 10,
   std::bind(&Controller::displacement_callback, this, _1)); 
 
-  valve_status_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::SwitchStatus>("/switch_status", 10,
+  valve_status_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::SwitchStatus>("/Switch", 10,
   std::bind(&Controller::Switchs_callback, this, _1)); 
 
  
@@ -48,11 +48,12 @@ Controller::Controller(std::string node_name):Node(node_name){
   std::bind(&Controller::pitchMotor_handle_cancel, this, _1),
   std::bind(&Controller::pitchMotor_handle_accepted, this, _1));
 
-  thru_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCommand>("/ThrusterCommand", 10); 
-  gs_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::GsCmd>("~/gs_cmd", 10); 
-  pitch_cmd_publisher   = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::PitchMotorCmd>("~/pitch_motor_cmd", 10); 
-  pump_cmd_publisher    = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::PlungerPumpCmd>("~/pump_cmd", 10); 
-  switch_cmd_publisher  = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::SwitchCmd>("~/switch_cmd", 10); 
+  // 话题对齐 communicationservice / mavlink_bridge_node
+  thru_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::ThrusterCommand>("/thruster_command", 10); 
+  gs_cmd_publisher = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::GsCmd>("/obc/gs_cmd", 10); 
+  pitch_cmd_publisher   = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::PitchMotorCmd>("/obc/pitch_cmd", 10); 
+  pump_cmd_publisher    = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::PlungerPumpCmd>("/obc/plunger_pump_cmd", 10); 
+  switch_cmd_publisher  = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::SwitchCmd>("/obc/switch_cmd", 10); 
   pid_output_publisher  = this->create_publisher<sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd>("~/pid_output_cmd", 10); 
   gs_output_publisher   = this->create_publisher<std_msgs::msg::Float32MultiArray>("~/gs_cmd_output", 10); 
 
@@ -201,6 +202,12 @@ void Controller::controller_init(){
   ModeMap[PILOT_MODE_NONE] = std::make_shared<PilotNone>(this);
   ModeMap[PILOT_MODE_MANUAL] = std::make_shared<PilotManual>(this);
   ModeMap[PILOT_MODE_MISSION] = std::make_shared<PilotMission>(this);
+
+  gs_rr_index_ = 0;
+  for(int i = 0; i < 4; i++){
+    last_gs_cmd_sent_[i] = 1.0e6f;  // 强制首帧下发
+    gs_cycles_since_sent_[i] = GS_CMD_HEARTBEAT_CYCLES;
+  }
 }
 
 /********************************************************************************
@@ -266,7 +273,7 @@ void Controller::clear_output(void){
   output.y = 0.0;
   output.z = 0.0;
   output.roll = 0.0;
-  output.roll = 0.0;
+  output.pitch = 0.0;
   output.yaw = 0.0;
 }
 
@@ -349,32 +356,75 @@ void Controller::RovOdom_callback(const nav_msgs::msg::Odometry& msg){
 
 
 /********************************************************************************
+ * @brief  :舵机指令轮转下发，降低 /obc/gs_cmd 高频丢包率（原 80Hz 连发易丢包）
+ * @param  gscmd: 四路目标角 deg
+ * @return :NONE
+ *********************************************************************************/
+void Controller::publish_gs_cmd_round_robin(const float gscmd[4]){
+  for(int i = 0; i < 4; i++){
+    gs_cycles_since_sent_[i]++;
+  }
+
+  const int idx = gs_rr_index_;
+  gs_rr_index_ = (gs_rr_index_ + 1) % 4;
+
+  const float target = LIMIT(gscmd[idx], -MAX_GS_ANGLE, MAX_GS_ANGLE);
+  const float delta = fabsf(target - last_gs_cmd_sent_[idx]);
+  const bool changed = (delta >= GS_CMD_CHANGE_DEG);
+  const bool heartbeat = (gs_cycles_since_sent_[idx] >= GS_CMD_HEARTBEAT_CYCLES);
+
+  if(!changed && !heartbeat){
+    return;
+  }
+
+  sealien_ctrlpilot_msgmanagement::msg::GsCmd gs_send;
+  gs_send.index = static_cast<uint8_t>(idx);
+  gs_send.cmd_type = 0;  // 角度控制
+  gs_send.angle_deg = target;
+  // 仅在真正下发时带转速；避免每帧 4 路重复刷速度字段
+  gs_send.forward_speed = GS_CMD_SPEED_DPS;
+  gs_send.reverse_speed = GS_CMD_SPEED_DPS;
+  gs_cmd_publisher->publish(gs_send);
+
+  last_gs_cmd_sent_[idx] = target;
+  gs_cycles_since_sent_[idx] = 0;
+}
+
+/********************************************************************************
  * @brief  :动力分配
  * @param  NONE
  * @return :NONE
  *********************************************************************************/
 void Controller::Thru_Cmd_Mix(void){
   sealien_ctrlpilot_msgmanagement::msg::ThrusterCommand thru;
-  sealien_ctrlpilot_msgmanagement::msg::GsCmd gs_send;
   sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd pid_output;
   std_msgs::msg::Float32MultiArray gs_cmd_output;
 
   float gscmd[4]; //0,1是水平舵机，2、3是垂直舵机
 
+  // AUV 只用 thrusts[0]；其余保持中位，避免把 0 当油门下发
+  for(size_t i = 0; i < thru.thrusts.size(); i++){
+    thru.thrusts[i] = 1500;
+  }
+
+  // TwistCmd.lock_status: 0解锁 / 1上锁；网关 thruster_unlocked: true解锁 / false上锁
+  thru.thruster_unlocked = (twist_cmd.lock_status == 0);
+
   if(twist_cmd.lock_status){  //上锁后油门归中位。解锁才计算
     thru.thrusts[0] = 1500;    //范围1000-2000，其中1500是中位
-    gscmd[0] = 0.0;
-    gscmd[1] = 0.0;
-    gscmd[2] = 0.0;
-    gscmd[3] = 0.0;
+    gscmd[0] = 0.0f;
+    gscmd[1] = 0.0f;
+    gscmd[2] = 0.0f;
+    gscmd[3] = 0.0f;
   }else{
-    thru.thrusts[0] = (uint16_t)(output.x*500 + 1500);
+    float thrust_cmd = LIMIT(output.x * 500.0f + 1500.0f, 1000.0f, 2000.0f);
+    thru.thrusts[0] = (uint16_t)thrust_cmd;
 
     if(fabs(output.x)< 0.05){
-      gscmd[0] =  0.0;
-      gscmd[1] =  0.0;
-      gscmd[2] =  0.0;
-      gscmd[3] =  0.0;
+      gscmd[0] =  0.0f;
+      gscmd[1] =  0.0f;
+      gscmd[2] =  0.0f;
+      gscmd[3] =  0.0f;
 
       //积分清零，防止停止时舵面还有积分量。
       pid_angle_pitch.integ = 0.0;
@@ -382,21 +432,20 @@ void Controller::Thru_Cmd_Mix(void){
       pid_rate_yaw.integ    = 0.0;
 
     }else{
-      gscmd[0] =  gs1_dir*output.pitch * MAX_GS_ANGLE;
-      gscmd[1] =  gs2_dir*output.pitch * MAX_GS_ANGLE;
+      gscmd[0] =  gs1_dir * output.pitch * MAX_GS_ANGLE;
+      gscmd[1] =  gs2_dir * output.pitch * MAX_GS_ANGLE;
 
-      gscmd[2] =  gs3_dir*output.yaw * MAX_GS_ANGLE;
-      gscmd[3] =  gs4_dir*output.yaw * MAX_GS_ANGLE;
+      gscmd[2] =  gs3_dir * output.yaw * MAX_GS_ANGLE;
+      gscmd[3] =  gs4_dir * output.yaw * MAX_GS_ANGLE;
     }
   }
 
-  thru_cmd_publisher->publish(thru);
-
-  for(int i=0; i<4; i++){
-    gs_send.index = i;
-    gs_send.angle_deg = gscmd[gs_send.index];
-    gs_cmd_publisher->publish(gs_send);
+  for(int i = 0; i < 4; i++){
+    gscmd[i] = LIMIT(gscmd[i], -MAX_GS_ANGLE, MAX_GS_ANGLE);
   }
+
+  thru_cmd_publisher->publish(thru);
+  publish_gs_cmd_round_robin(gscmd);
 
   pid_output.x = output.x;
   pid_output.y = output.y;
@@ -407,8 +456,7 @@ void Controller::Thru_Cmd_Mix(void){
 
   pid_output_publisher->publish(pid_output);
 
-
-  for(int i=0; i<4; i++){
+  for(int i = 0; i < 4; i++){
     gs_cmd_output.data.push_back(gscmd[i]);
   }
 
