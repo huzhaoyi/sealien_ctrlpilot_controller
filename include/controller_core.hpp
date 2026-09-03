@@ -6,6 +6,7 @@
 #include <thread>
 
 #include "pid.hpp"
+#include "pid_debug_logger.hpp"
 #include "ctr_mode.hpp"
 #include <map>
 #include <memory>
@@ -34,6 +35,8 @@
 #include "sealien_ctrlpilot_msgmanagement/msg/switch_cmd.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/switch_status.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/task_pos_cmd.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/task_status.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/task_stage.hpp"
 
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "sealien_ctrlpilot_msgmanagement/action/percent_target.hpp"
@@ -136,12 +139,19 @@ public:
   int gs2_dir;
   int gs3_dir;
   int gs4_dir;
+  // 0: cross（水平跟 pitch、垂直跟 yaw）；1: x（四路混 pitch+yaw，叉型）
+  int gs_mix_layout;
+  float gs_mix_x_scale;  // 叉型合成缩放，默认 1/sqrt(2)，减轻双轴饱和
+
 private:
+  void pid_debug_log_sample(void);
   bool isModelegal(int ctrlmod);
   void controller_init();
   void Thru_Cmd_Mix(void);
   void publish_gs_cmd_round_robin(const float gscmd[4]);
 
+  PidDebugLogger pid_debug_logger_;
+  float last_gscmd_[4];  // 本周期混控后舵角 deg，供 CSV
   float last_gs_cmd_sent_[4];   // 上次实际下发角度
   int gs_rr_index_;             // 轮转通道 0..3
   int gs_cycles_since_sent_[4]; // 各通道距上次下发的周期数
@@ -158,6 +168,8 @@ private:
   void RovOdom_callback(const nav_msgs::msg::Odometry& msg);
   void LocateOdom_callback(const nav_msgs::msg::Odometry& msg);
   void trackCmd_callback(const msg_FollowCmd& msg);
+  void TaskStatus_callback(const sealien_ctrlpilot_msgmanagement::msg::TaskStatus& msg);
+  void TaskStage_callback(const sealien_ctrlpilot_msgmanagement::msg::TaskStage& msg);
 
   void displacement_callback(const sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus& msg);
   void Switchs_callback(const sealien_ctrlpilot_msgmanagement::msg::SwitchStatus& msg);
@@ -188,6 +200,9 @@ private:
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TwistCmd>::SharedPtr TwistCmd_subscriber;      //订阅遥控指令
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr RovOdom_subscriber;                //订阅状态数据
   rclcpp::Subscription<msg_FollowCmd>::SharedPtr track_cmd_subscriber;   //订阅路径跟踪模块下发的速度
+  rclcpp::Subscription<msg_FollowCmd>::SharedPtr task_mission_subscriber_;  // Task MISSION 目标
+  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TaskStatus>::SharedPtr task_status_subscriber_;
+  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TaskStage>::SharedPtr task_stage_subscriber_;
 
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus>::SharedPtr displacement_status_subscriber;   
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::SwitchStatus>::SharedPtr valve_status_subscriber;   

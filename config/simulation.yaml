@@ -32,3 +32,7 @@ controller:
     gs2_dir: 1    #舵机方向--水平2
     gs3_dir: 1    #舵机方向--垂直1
     gs4_dir: -1   #舵机方向--垂直2
+    gs_mix_layout: "cross"  # 实艇十字舵；叉型用 "x"
+    gs_mix_x_scale: 0.70710678  # 叉型双轴同时满杆时的缩放
+    pid_debug_log_enable: true
+    pid_debug_log_dir: ""

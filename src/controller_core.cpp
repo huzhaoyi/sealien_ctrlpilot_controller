@@ -28,7 +28,21 @@ Controller::Controller(std::string node_name):Node(node_name){
     "/msg_adapter/rov_odom", 10, std::bind(&Controller::RovOdom_callback, this, _1));       //订阅状态数据
 
   track_cmd_subscriber = this->create_subscription<msg_FollowCmd>("/pure_pursuit_node/follow_cmd", 10,
-    std::bind(&Controller::trackCmd_callback, this, _1));   
+    std::bind(&Controller::trackCmd_callback, this, _1));
+  // Task 编排下发的 MISSION 目标（与 planner 同结构，独立话题避免抢控）
+  task_mission_subscriber_ = this->create_subscription<msg_FollowCmd>(
+      "/task/mission_cmd",
+      10,
+      std::bind(&Controller::trackCmd_callback, this, _1));
+
+  task_status_subscriber_ = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::TaskStatus>(
+      "/task_status",
+      10,
+      std::bind(&Controller::TaskStatus_callback, this, _1));
+  task_stage_subscriber_ = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::TaskStage>(
+      "/task_stage",
+      10,
+      std::bind(&Controller::TaskStage_callback, this, _1));
     
   displacement_status_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus>("/WireDisplacementStatus", 10,
   std::bind(&Controller::displacement_callback, this, _1)); 
@@ -85,9 +99,7 @@ void Controller::Run(){
   controller_mode_sw();  //每次计算都要先判断控制模式，如果需要就切换
   controller_step();  //控制更新
   control_output();    //控制输出
-  
-  // RCLCPP_INFO(this->get_logger(), "get_status[%d]", status.get_status);
-
+  pid_debug_log_sample();
 }
 
 
@@ -111,11 +123,53 @@ void Controller::controller_init(){
   this->declare_parameter<int>("gs2_dir", 1);
   this->declare_parameter<int>("gs3_dir", 1);
   this->declare_parameter<int>("gs4_dir", 1);
+  // "cross" = 十字解耦（实艇默认）；"x" = 叉型四路混控
+  this->declare_parameter<std::string>("gs_mix_layout", "cross");
+  this->declare_parameter<double>("gs_mix_x_scale", 0.70710678);
 
   gs1_dir = this->get_parameter("gs1_dir").as_int(); 
   gs2_dir = this->get_parameter("gs2_dir").as_int();
   gs3_dir = this->get_parameter("gs3_dir").as_int();
   gs4_dir = this->get_parameter("gs4_dir").as_int();
+
+  {
+    const std::string layout = this->get_parameter("gs_mix_layout").as_string();
+    if (layout == "cross")
+    {
+      gs_mix_layout = 0;
+    }
+    else
+    {
+      gs_mix_layout = 1;  // default / "x"
+    }
+  }
+  gs_mix_x_scale = static_cast<float>(this->get_parameter("gs_mix_x_scale").as_double());
+  if (gs_mix_x_scale < 0.1f)
+  {
+    gs_mix_x_scale = 0.1f;
+  }
+  if (gs_mix_x_scale > 1.0f)
+  {
+    gs_mix_x_scale = 1.0f;
+  }
+
+  this->declare_parameter<bool>("pid_debug_log_enable", true);
+  this->declare_parameter<std::string>("pid_debug_log_dir", "");
+  {
+    const bool log_enable = this->get_parameter("pid_debug_log_enable").as_bool();
+    const std::string log_dir = this->get_parameter("pid_debug_log_dir").as_string();
+    pid_debug_logger_.configure(this->get_logger(), log_enable, log_dir);
+  }
+
+  RCLCPP_INFO(
+      this->get_logger(),
+      "gs_mix_layout=%s gs_mix_x_scale=%.3f dirs=[%d,%d,%d,%d] mission_vel=pid_vx",
+      (gs_mix_layout == 0) ? "cross" : "x",
+      gs_mix_x_scale,
+      gs1_dir,
+      gs2_dir,
+      gs3_dir,
+      gs4_dir);
 
   status.angle.x = 0;
   status.angle.y = 0;
@@ -207,6 +261,7 @@ void Controller::controller_init(){
   for(int i = 0; i < 4; i++){
     last_gs_cmd_sent_[i] = 1.0e6f;  // 强制首帧下发
     gs_cycles_since_sent_[i] = GS_CMD_HEARTBEAT_CYCLES;
+    last_gscmd_[i] = 0.0f;
   }
 }
 
@@ -310,6 +365,62 @@ void Controller::trackCmd_callback(const msg_FollowCmd& msg){
   target_cmd.yaw_rate     = msg.twist.twist.angular.z;
 }
 
+void Controller::TaskStatus_callback(const sealien_ctrlpilot_msgmanagement::msg::TaskStatus& msg){
+  pid_debug_logger_.on_task_status(msg);
+}
+
+void Controller::TaskStage_callback(const sealien_ctrlpilot_msgmanagement::msg::TaskStage& msg){
+  pid_debug_logger_.on_task_stage(msg);
+}
+
+void Controller::pid_debug_log_sample(void){
+  if (!pid_debug_logger_.is_recording())
+  {
+    return;
+  }
+
+  pid_debug_sample_t sample;
+  sample.t_sec = this->now().seconds();
+  sample.task_id = pid_debug_logger_.task_id();
+  sample.script_id = pid_debug_logger_.script_id();
+  sample.ctrl_mode = static_cast<int>(twist_cmd.ctrl_mode);
+  sample.lock_status = static_cast<int>(twist_cmd.lock_status);
+  sample.depth_m = static_cast<float>(status.pos.z);
+  sample.velx_sp = target_cmd.velx;
+  sample.velx = static_cast<float>(status.vel.x);
+  sample.velx_err = sample.velx_sp - sample.velx;
+  sample.thrust_out = output.x;
+  sample.pitch_sp = target_cmd.pitch_angle;
+  sample.pitch = static_cast<float>(status.angle.y);
+  sample.pitch_err = sample.pitch_sp - sample.pitch;
+  sample.pitch_rate_sp = pid_angle_pitch.out;
+  sample.pitch_rate = static_cast<float>(status.rate.y);
+  sample.pitch_rate_out = pid_rate_pitch.out;
+  sample.yaw_rate_sp = target_cmd.yaw_rate;
+  sample.yaw_rate = static_cast<float>(status.rate.z);
+  sample.yaw_rate_out = pid_rate_yaw.out;
+  sample.out_x = output.x;
+  sample.out_pitch = output.pitch;
+  sample.out_yaw = output.yaw;
+  sample.gs1 = last_gscmd_[0];
+  sample.gs2 = last_gscmd_[1];
+  sample.gs3 = last_gscmd_[2];
+  sample.gs4 = last_gscmd_[3];
+  sample.angle_pitch_kp = pid_angle_pitch.kp;
+  sample.angle_pitch_ki = pid_angle_pitch.ki;
+  sample.angle_pitch_kd = pid_angle_pitch.kd;
+  sample.rate_pitch_kp = pid_rate_pitch.kp;
+  sample.rate_pitch_ki = pid_rate_pitch.ki;
+  sample.rate_pitch_kd = pid_rate_pitch.kd;
+  sample.rate_yaw_kp = pid_rate_yaw.kp;
+  sample.rate_yaw_ki = pid_rate_yaw.ki;
+  sample.rate_yaw_kd = pid_rate_yaw.kd;
+  sample.vel_x_kp = pid_vx.kp;
+  sample.vel_x_ki = pid_vx.ki;
+  sample.vel_x_kd = pid_vx.kd;
+  pid_debug_logger_.write_sample(sample);
+}
+
 void Controller::displacement_callback(const sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus& msg){
   status.sensor_displace_oilbladder = msg.displacement_mm[0]*100/250;
   status.sensor_displace_pitchmotor = msg.displacement_mm[1]*100/250;
@@ -400,7 +511,9 @@ void Controller::Thru_Cmd_Mix(void){
   sealien_ctrlpilot_msgmanagement::msg::TaskPosCmd pid_output;
   std_msgs::msg::Float32MultiArray gs_cmd_output;
 
-  float gscmd[4]; //0,1是水平舵机，2、3是垂直舵机
+  // cross: [0,1] 水平跟 pitch，[2,3] 垂直跟 yaw
+  // x(叉型): 四路均混 pitch+yaw，姿态耦合更匀
+  float gscmd[4];
 
   // AUV 只用 thrusts[0]；其余保持中位，避免把 0 当油门下发
   for(size_t i = 0; i < thru.thrusts.size(); i++){
@@ -431,17 +544,32 @@ void Controller::Thru_Cmd_Mix(void){
       pid_rate_pitch.integ  = 0.0;
       pid_rate_yaw.integ    = 0.0;
 
-    }else{
+    }else if (gs_mix_layout == 0){
+      // 十字：轴解耦。未用轴命令为 0（回中），不保持上次偏角。
       gscmd[0] =  gs1_dir * output.pitch * MAX_GS_ANGLE;
       gscmd[1] =  gs2_dir * output.pitch * MAX_GS_ANGLE;
-
       gscmd[2] =  gs3_dir * output.yaw * MAX_GS_ANGLE;
       gscmd[3] =  gs4_dir * output.yaw * MAX_GS_ANGLE;
+    }else{
+      // 叉型：四路舵同时参与 pitch(深) 与 yaw(向)
+      // 基准混控（安装反向用 gsN_dir 翻转）：
+      //   ch0 = +pitch + yaw
+      //   ch1 = +pitch - yaw
+      //   ch2 = -pitch + yaw
+      //   ch3 = -pitch - yaw
+      const float pitch_cmd = output.pitch;
+      const float yaw_cmd = output.yaw;
+      const float scale = gs_mix_x_scale * MAX_GS_ANGLE;
+      gscmd[0] = gs1_dir * ( pitch_cmd + yaw_cmd) * scale;
+      gscmd[1] = gs2_dir * ( pitch_cmd - yaw_cmd) * scale;
+      gscmd[2] = gs3_dir * (-pitch_cmd + yaw_cmd) * scale;
+      gscmd[3] = gs4_dir * (-pitch_cmd - yaw_cmd) * scale;
     }
   }
 
   for(int i = 0; i < 4; i++){
     gscmd[i] = LIMIT(gscmd[i], -MAX_GS_ANGLE, MAX_GS_ANGLE);
+    last_gscmd_[i] = gscmd[i];
   }
 
   thru_cmd_publisher->publish(thru);

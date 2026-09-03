@@ -27,4 +27,15 @@ controller:
     vel_x_pid_P: 1.5 #x轴速度P
     vel_x_pid_I: 0.0 #x轴速度I
     vel_x_pid_D: 0.01 #x轴速度D
+    #舵项系数
+    gs1_dir: -1
+    gs2_dir: 1
+    gs3_dir: 1
+    gs4_dir: -1
+    # 实艇当前十字舵：水平跟 pitch、垂直跟 yaw；叉型改回 "x"
+    gs_mix_layout: "cross"
+    gs_mix_x_scale: 0.70710678
+    # Task 开始写 CSV，结束/失败关文件；空目录 = $HOME/sealien_auv_ws/logs/pid
+    pid_debug_log_enable: true
+    pid_debug_log_dir: ""
 

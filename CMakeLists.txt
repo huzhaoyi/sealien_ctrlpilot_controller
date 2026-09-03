@@ -32,7 +32,8 @@ add_executable(controller
               src/controller_node.cpp
               src/controller_core.cpp
               src/ctr_mode.cpp
-              src/action_function.cpp)
+              src/action_function.cpp
+              src/pid_debug_logger.cpp)
 target_link_libraries(controller libyaml-cpp.a)
 ament_target_dependencies(controller 
   rclcpp 

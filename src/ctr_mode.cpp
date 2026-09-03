@@ -62,7 +62,7 @@ void PilotMission::update(void){
   float pitch_rate_error;     //俯仰角速度误差
   float yaw_rate_error;       //航向角速率误差
 
-  //推力，前向
+  // 前向速度闭环：velx 为速度目标 (m/s)，走 pid_vx
   x_vel_error = controller_->target_cmd.velx - controller_->status.vel.x;
   vel_output.x = controller_->pid_vx.pid_update(x_vel_error);
 

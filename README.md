@@ -29,8 +29,14 @@
 - /msg_adapter/sonar/pose: geometry_msgs/msg/PoseWithCovarianceStamped  #声呐读数，高度控制时使用，只使用Z轴
 - /obc/twist_cmd: sealien_ctrlpilot_msgmanagement/msg/TwistCmd           #订阅控制指令,由遥控器发出
 - /odometry/filtered: nav_msgs/msg/Odometry                             #定位模块输出的定位信息，目前是xy方向（即2D），使用x\y的位置和速度
-- /pure_pursuit_node/follow_cmd: sealien_ctrlpilot_msgmanagement/msg/FollowCmd  #路径跟踪输出，包括控制指令和一些状态
-- /pure_pursuit_node/path_track_status: std_msgs/msg/Bool               #路径跟踪状态，给控制模块使用，0：当前没有路径或者跟踪结束，1：正在跟踪
+- /task/mission_cmd: sealien_ctrlpilot_msgmanagement/msg/FollowCmd  # Task MISSION 目标（与 follow_cmd 同结构）
+- /task_status /task_stage: 任务状态（用于门控 PID 调试 CSV）
+
+### PID 调试 CSV
+- 参数 `pid_debug_log_enable`（默认 true）、`pid_debug_log_dir`（空= `$HOME/sealien_auv_ws/logs/pid`）
+- Task `ENTER/ONGOING` 开始写，`EXIT/FINISH/FAIL` 关文件；拷回 CSV 即可离线调 PID
+- 文件名含 `job<task_id>_s<script_id>_<脚本名>`；首行 `#` 注释写 task/script/params
+- 列含：当前 stage、实测 `velx`、四环实时增益（angle/rate pitch、rate yaw、vel_x）
 
 
 ### 3.发布话题
