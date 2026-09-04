@@ -28,10 +28,18 @@ controller:
     vel_x_pid_I: 0.5 #x轴速度I
     vel_x_pid_D: 0.0 #x轴速度D
 
+<<<<<<< HEAD
     gs1_dir: -1   #舵机方向--水平1
     gs2_dir: 1    #舵机方向--水平2
     gs3_dir: 1    #舵机方向--垂直1
     gs4_dir: -1   #舵机方向--垂直2
+=======
+    # 安装镜像补偿（共模俯仰/航向），不是横滚；实物同向时软件可一正一负
+    gs1_dir: -1   # 水平1（pitch）
+    gs2_dir: 1    # 水平2（pitch）
+    gs3_dir: 1    # 垂直1（yaw）
+    gs4_dir: -1   # 垂直2（yaw）
+>>>>>>> 6fa89a2 (完善十字混控与 Jetson 自启（FastDDS/等 LoRa RX），并增加 PID 调试日志。)
     gs_mix_layout: "cross"  # 实艇十字舵；叉型用 "x"
     gs_mix_x_scale: 0.70710678  # 叉型双轴同时满杆时的缩放
     pid_debug_log_enable: true

@@ -1,7 +1,7 @@
 [Unit]
 Description=Sealien AUV OBC + controller + msgs_adapter
 After=network-online.target comm_bringup.service rov_bringup.service
-Wants=network-online.target
+Wants=network-online.target rov_bringup.service
 StartLimitIntervalSec=120
 StartLimitBurst=8
 
@@ -13,6 +13,7 @@ WorkingDirectory=/home/sealien/sealien_auv_ws
 Environment=ROS_DOMAIN_ID=99
 Environment=ROS_LOCALHOST_ONLY=0
 Environment=HOME=/home/sealien
+Environment=FASTRTPS_DEFAULT_PROFILES_FILE=/home/sealien/sealien_auv_ws/install/sealien_ctrlpilot_onboardcontrol/share/sealien_ctrlpilot_onboardcontrol/config/fastdds_udp_only.xml
 ExecStartPre=/bin/sleep 8
 ExecStart=/home/sealien/ctrl_bringup.sh
 Restart=on-failure

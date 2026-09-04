@@ -25,6 +25,13 @@ source "${ROS_SETUP}"
 source "${WS_SETUP}"
 set -u
 
+# 禁用 FastDDS SharedMemory：多 systemd 服务同机时避免「已匹配无回调」
+_DDS_XML="$(dirname "${WS_SETUP}")/sealien_ctrlpilot_onboardcontrol/share/sealien_ctrlpilot_onboardcontrol/config/fastdds_udp_only.xml"
+if [[ -f "${_DDS_XML}" ]]; then
+    export FASTRTPS_DEFAULT_PROFILES_FILE="${FASTRTPS_DEFAULT_PROFILES_FILE:-${_DDS_XML}}"
+    echo "FastDDS: UDP-only profile (${FASTRTPS_DEFAULT_PROFILES_FILE})"
+fi
+
 CHILD_PIDS=()
 
 cleanup()
@@ -50,6 +57,26 @@ cleanup()
 }
 
 trap cleanup EXIT INT TERM
+
+wait_for_joy_publisher()
+{
+    local i
+    local max="${JOY_WAIT_SEC:-15}"
+    echo "waiting for lora_joy_rx (up to ${max}s)..."
+    for i in $(seq 1 "${max}"); do
+        # 只看进程，不在 bringup 里跑 ros2 topic（DDS 发现慢且易拖死启动）
+        if pgrep -f 'lora_joy_rx_node' >/dev/null 2>&1; then
+            echo "lora_joy_rx_node ready"
+            sleep 1
+            return 0
+        fi
+        sleep 1
+    done
+    echo "WARN: lora_joy_rx_node not seen; starting OBC anyway (lost-joy resubscribe as fallback)" >&2
+    return 0
+}
+
+wait_for_joy_publisher
 
 echo "starting OBC (lora zorro), ROS_DOMAIN_ID=${ROS_DOMAIN_ID}"
 ros2 launch sealien_ctrlpilot_onboardcontrol onboardcontrol_lora_zorro.launch.py &
