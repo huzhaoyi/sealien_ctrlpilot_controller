@@ -27,11 +27,14 @@ controller:
     vel_x_pid_P: 1.5 #x轴速度P
     vel_x_pid_I: 0.0 #x轴速度I
     vel_x_pid_D: 0.01 #x轴速度D
-    #舵项系数
-    gs1_dir: -1
-    gs2_dir: 1
-    gs3_dir: 1
-    gs4_dir: -1
+    # 舵向系数：只做安装镜像补偿，不是横滚差动。
+    # 十字舵俯仰/航向是共模：同一轴两路应带出同向舵面；若安装镜像，
+    # 软件指令会一正一负（例 pitch→ch0=-45,ch1=+45），实物才同向。
+    # 若两路指令同号、实物却一前一后：把「反的那路」dir 取反后再确认。
+    gs1_dir: -1   # 水平1（pitch）
+    gs2_dir: 1    # 水平2（pitch）
+    gs3_dir: 1    # 垂直1（yaw）
+    gs4_dir: -1   # 垂直2（yaw）
     # 实艇当前十字舵：水平跟 pitch、垂直跟 yaw；叉型改回 "x"
     gs_mix_layout: "cross"
     gs_mix_x_scale: 0.70710678
