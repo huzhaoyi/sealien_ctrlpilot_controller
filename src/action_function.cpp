@@ -23,6 +23,7 @@ using namespace std::placeholders;
  * @return :NONE
  *********************************************************************************/
 rclcpp_action::GoalResponse Controller::oilBladder_handle_goal(const rclcpp_action::GoalUUID& uuid, std::shared_ptr<const PercentTarget::Goal> goal){
+  (void)uuid;
   RCLCPP_INFO(this->get_logger(), "oil_bladder 收到Goal请求,order type[%f]",goal->order);
 
   rclcpp_action::GoalResponse res;
@@ -44,6 +45,7 @@ rclcpp_action::GoalResponse Controller::oilBladder_handle_goal(const rclcpp_acti
  * @return :NONE
  *********************************************************************************/
 rclcpp_action::CancelResponse Controller::oilBladder_handle_cancel(const std::shared_ptr<GoalHandlePercentTarget> goal_handle){
+  (void)goal_handle;
   RCLCPP_INFO(this->get_logger(), "oil_bladder 收到取消请求");
   return rclcpp_action::CancelResponse::ACCEPT;
 }
@@ -139,6 +141,7 @@ void Controller::oilBladder_execute(const std::shared_ptr<GoalHandlePercentTarge
  * @return :NONE
  *********************************************************************************/
 rclcpp_action::GoalResponse Controller::pitchMotor_handle_goal(const rclcpp_action::GoalUUID& uuid, std::shared_ptr<const PercentTarget::Goal> goal){
+  (void)uuid;
   RCLCPP_INFO(this->get_logger(), "pitch Motor 收到Goal请求,order type[%f]",goal->order);
 
   rclcpp_action::GoalResponse res;
@@ -160,6 +163,7 @@ rclcpp_action::GoalResponse Controller::pitchMotor_handle_goal(const rclcpp_acti
  * @return :NONE
  *********************************************************************************/
 rclcpp_action::CancelResponse Controller::pitchMotor_handle_cancel(const std::shared_ptr<GoalHandlePercentTarget> goal_handle){
+  (void)goal_handle;
   RCLCPP_INFO(this->get_logger(), "pitch Motor 收到取消请求");
   return rclcpp_action::CancelResponse::ACCEPT;
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Jetson 开机自启：OBC（LoRa joy→twist）+ controller + msgs_adapter。
+# Jetson 开机自启：OBC（LoRa joy→twist）+ controller + msgs_adapter + task_manager。
 # 依赖已有 comm_bringup（MAVLink）与 rov_bringup（LoRa RX /joy）。
 set -eo pipefail
 
@@ -62,17 +62,17 @@ wait_for_joy_publisher()
 {
     local i
     local max="${JOY_WAIT_SEC:-15}"
-    echo "waiting for lora_joy_rx (up to ${max}s)..."
+    echo "waiting for lora_bridge_auv or lora_joy_rx (up to ${max}s)..."
     for i in $(seq 1 "${max}"); do
         # 只看进程，不在 bringup 里跑 ros2 topic（DDS 发现慢且易拖死启动）
-        if pgrep -f 'lora_joy_rx_node' >/dev/null 2>&1; then
-            echo "lora_joy_rx_node ready"
+        if pgrep -f 'lora_bridge_node' >/dev/null 2>&1 || pgrep -f 'lora_joy_rx_node' >/dev/null 2>&1; then
+            echo "LoRa RX/bridge ready"
             sleep 1
             return 0
         fi
         sleep 1
     done
-    echo "WARN: lora_joy_rx_node not seen; starting OBC anyway (lost-joy resubscribe as fallback)" >&2
+    echo "WARN: lora bridge/rx not seen; starting OBC anyway (lost-joy resubscribe as fallback)" >&2
     return 0
 }
 
@@ -88,6 +88,10 @@ CHILD_PIDS+=("$!")
 
 echo "starting controller"
 ros2 launch sealien_ctrlpilot_controller sealien_ctrlpilot_controller.launch.py &
+CHILD_PIDS+=("$!")
+
+echo "starting task_manager"
+ros2 launch sealien_ctrlpilot_taskmanagement taskmanagement.launch.py &
 CHILD_PIDS+=("$!")
 
 # 任一子进程退出则结束，由 systemd Restart=on-failure 拉起。

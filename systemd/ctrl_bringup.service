@@ -15,7 +15,7 @@ Environment=ROS_LOCALHOST_ONLY=0
 Environment=HOME=/home/sealien
 Environment=FASTRTPS_DEFAULT_PROFILES_FILE=/home/sealien/sealien_auv_ws/install/sealien_ctrlpilot_onboardcontrol/share/sealien_ctrlpilot_onboardcontrol/config/fastdds_udp_only.xml
 ExecStartPre=/bin/sleep 8
-ExecStart=/home/sealien/ctrl_bringup.sh
+ExecStart=/home/sealien/sealien_auv_ws/src/sealien_ctrlpilot_controller/scripts/ctrl_bringup.sh
 Restart=on-failure
 RestartSec=5
 KillMode=control-group
