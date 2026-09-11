@@ -37,6 +37,8 @@
 - Task `ENTER/ONGOING` 开始写，`EXIT/FINISH/FAIL` 关文件；拷回 CSV 即可离线调 PID
 - 文件名含 `job<task_id>_s<script_id>_<脚本名>`；首行 `#` 注释写 task/script/params
 - 列含：当前 stage、实测 `velx`、四环实时增益（angle/rate pitch、rate yaw、vel_x）
+- 同文件追加 `/elb105/shzr04` 关键列：对准、原始 RPY/航向、陀螺、对底/对水 DVL、`dvl_valid_flags`、经纬与底高（无惯导时为 nan/-1）
+- 另订阅：`/elb105/shzr04`（仅供 PID CSV 锁存，不参与控制律）
 
 
 ### 3.发布话题

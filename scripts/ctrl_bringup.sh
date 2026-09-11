@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Jetson 开机自启：OBC（LoRa joy→twist）+ controller + msgs_adapter + task_manager。
-# 依赖已有 comm_bringup（MAVLink）与 rov_bringup（LoRa RX /joy）。
+# 依赖已有 comm_bringup（MAVLink）与 imu_lora_bringup（惯导 + LoRa /joy）。
 set -eo pipefail
 
 export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-99}"

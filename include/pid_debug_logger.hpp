@@ -75,6 +75,25 @@ struct pid_debug_sample_t
     float vel_x_kp;
     float vel_x_ki;
     float vel_x_kd;
+    /* /elb105/shzr04 latch (device frame); missing -> nan / -1 */
+    int ins_align;
+    float ins_roll_deg;
+    float ins_pitch_deg;
+    float ins_heading_deg;
+    float ins_gyro_x_degps;
+    float ins_gyro_y_degps;
+    float ins_gyro_z_degps;
+    float dvl_btm_f_mps;
+    float dvl_btm_r_mps;
+    float dvl_btm_d_mps;
+    float dvl_wtr_f_mps;
+    float dvl_wtr_r_mps;
+    float dvl_wtr_d_mps;
+    int dvl_valid_flags;
+    int dvl_updated;
+    float dvl_height_m;
+    double ins_lat_deg;
+    double ins_lon_deg;
 };
 
 class PidDebugLogger

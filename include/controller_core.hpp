@@ -37,6 +37,9 @@
 #include "sealien_ctrlpilot_msgmanagement/msg/task_pos_cmd.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/task_status.hpp"
 #include "sealien_ctrlpilot_msgmanagement/msg/task_stage.hpp"
+#include "sealien_ctrlpilot_msgmanagement/msg/elb105_shzr04.hpp"
+
+#include <mutex>
 
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "sealien_ctrlpilot_msgmanagement/action/percent_target.hpp"
@@ -155,6 +158,9 @@ private:
   float last_gs_cmd_sent_[4];   // 上次实际下发角度
   int gs_rr_index_;             // 轮转通道 0..3
   int gs_cycles_since_sent_[4]; // 各通道距上次下发的周期数
+  sealien_ctrlpilot_msgmanagement::msg::Elb105Shzr04 last_shzr04_;
+  bool last_shzr04_valid_;
+  std::mutex shzr04_mutex_;
 
   void controller_mode_sw(void);
   void control_output(void);
@@ -170,6 +176,7 @@ private:
   void trackCmd_callback(const msg_FollowCmd& msg);
   void TaskStatus_callback(const sealien_ctrlpilot_msgmanagement::msg::TaskStatus& msg);
   void TaskStage_callback(const sealien_ctrlpilot_msgmanagement::msg::TaskStage& msg);
+  void Elb105Shzr04_callback(const sealien_ctrlpilot_msgmanagement::msg::Elb105Shzr04& msg);
 
   void displacement_callback(const sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus& msg);
   void Switchs_callback(const sealien_ctrlpilot_msgmanagement::msg::SwitchStatus& msg);
@@ -203,9 +210,10 @@ private:
   rclcpp::Subscription<msg_FollowCmd>::SharedPtr task_mission_subscriber_;  // Task MISSION 目标
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TaskStatus>::SharedPtr task_status_subscriber_;
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::TaskStage>::SharedPtr task_stage_subscriber_;
+  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::Elb105Shzr04>::SharedPtr elb105_shzr04_subscriber_;
 
   rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus>::SharedPtr displacement_status_subscriber;   
-  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::SwitchStatus>::SharedPtr valve_status_subscriber;   
+  rclcpp::Subscription<sealien_ctrlpilot_msgmanagement::msg::SwitchStatus>::SharedPtr valve_status_subscriber;  
 
   rclcpp_action::Server<PercentTarget>::SharedPtr oilBladder_server_;  //油囊
   rclcpp_action::Server<PercentTarget>::SharedPtr pitchMotor_server_;  //俯仰舵机

@@ -1,7 +1,7 @@
 [Unit]
 Description=Sealien AUV OBC + controller + msgs_adapter
-After=network-online.target comm_bringup.service rov_bringup.service
-Wants=network-online.target rov_bringup.service
+After=network-online.target comm_bringup.service imu_lora_bringup.service
+Wants=network-online.target imu_lora_bringup.service
 StartLimitIntervalSec=120
 StartLimitBurst=8
 

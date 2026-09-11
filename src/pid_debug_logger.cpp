@@ -221,7 +221,13 @@ void PidDebugLogger::start_recording(
         "angle_pitch_kp,angle_pitch_ki,angle_pitch_kd,"
         "rate_pitch_kp,rate_pitch_ki,rate_pitch_kd,"
         "rate_yaw_kp,rate_yaw_ki,rate_yaw_kd,"
-        "vel_x_kp,vel_x_ki,vel_x_kd\n");
+        "vel_x_kp,vel_x_ki,vel_x_kd,"
+        "ins_align,ins_roll_deg,ins_pitch_deg,ins_heading_deg,"
+        "ins_gyro_x_degps,ins_gyro_y_degps,ins_gyro_z_degps,"
+        "dvl_btm_f_mps,dvl_btm_r_mps,dvl_btm_d_mps,"
+        "dvl_wtr_f_mps,dvl_wtr_r_mps,dvl_wtr_d_mps,"
+        "dvl_valid_flags,dvl_updated,dvl_height_m,"
+        "ins_lat_deg,ins_lon_deg\n");
     if (n < 0)
     {
         RCLCPP_ERROR(logger_, "pid log header write failed");
@@ -331,7 +337,13 @@ void PidDebugLogger::write_sample(const pid_debug_sample_t &sample)
         "%.6f,%.6f,%.6f,"
         "%.6f,%.6f,%.6f,"
         "%.6f,%.6f,%.6f,"
-        "%.6f,%.6f,%.6f\n",
+        "%.6f,%.6f,%.6f,"
+        "%d,%.4f,%.4f,%.4f,"
+        "%.6f,%.6f,%.6f,"
+        "%.4f,%.4f,%.4f,"
+        "%.4f,%.4f,%.4f,"
+        "%d,%d,%.4f,"
+        "%.8f,%.8f\n",
         sample.t_sec,
         sample.task_id,
         sample.script_id,
@@ -373,7 +385,25 @@ void PidDebugLogger::write_sample(const pid_debug_sample_t &sample)
         sample.rate_yaw_kd,
         sample.vel_x_kp,
         sample.vel_x_ki,
-        sample.vel_x_kd);
+        sample.vel_x_kd,
+        sample.ins_align,
+        sample.ins_roll_deg,
+        sample.ins_pitch_deg,
+        sample.ins_heading_deg,
+        sample.ins_gyro_x_degps,
+        sample.ins_gyro_y_degps,
+        sample.ins_gyro_z_degps,
+        sample.dvl_btm_f_mps,
+        sample.dvl_btm_r_mps,
+        sample.dvl_btm_d_mps,
+        sample.dvl_wtr_f_mps,
+        sample.dvl_wtr_r_mps,
+        sample.dvl_wtr_d_mps,
+        sample.dvl_valid_flags,
+        sample.dvl_updated,
+        sample.dvl_height_m,
+        sample.ins_lat_deg,
+        sample.ins_lon_deg);
 
     if (n < 0)
     {

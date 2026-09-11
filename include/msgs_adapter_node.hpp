@@ -37,7 +37,8 @@ private:
   void depth_callback(const sealien_ctrlpilot_msgmanagement::msg::DepthStatus& msg);
   void resetRef_callback(const std_msgs::msg::Bool& msg);
   void get_params();
-  double Trans2LocatCoordinate(const double& angle);
+  /* heading_deg[deg, Z下] -> yaw[rad, Z上], 范围 (-pi, pi] */
+  double Trans2LocatCoordinate(const double& heading_deg);
 
   rclcpp::TimerBase::SharedPtr timer_;
   GeographicLib::LocalCartesian origin_ref;   //创建一个LocalCartesian对象，用于将经纬度转换为局部笛卡尔坐标

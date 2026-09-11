@@ -6,13 +6,22 @@
 * modify
 * Version   Date                Author              Described
 * V1.00     2026/8/25            Yi Lu               Created
+* V1.01     2026/9/9             JoeyHU                INS体轴映射修正(错误Y前假设)
+* V1.02     2026/9/10            JoeyHU                INS(x左/y前/z下)->base_link(x前/y左/z上); DVL恢复前/右/下
 *******************************************************************************/
 
-#include "msgs_adapter_node.hpp" 
+#include "msgs_adapter_node.hpp"
 
-#define RAD2DEG  (180.0/M_PI)
+#define DEG2RAD  (M_PI / 180.0)
 
 using std::placeholders::_1;
+
+/*
+ * base_link: x前 / y左 / z上（不变）
+ * 新INS体轴: x左 / y前 / z下（右手系）
+ * v_base = R * v_ins, R = [[0,1,0],[1,0,0],[0,0,-1]]  <=>  setRPY(pi, 0, pi/2)
+ * DVL字段为船体语义(前/右/下)，与旧版一致直通到 twist（前->x）
+ */
 
 /********************************************************************************
  * @brief  :构造函数
@@ -87,67 +96,80 @@ void MsgAdapter::sonar_callback(const sealien_ctrlpilot_msgmanagement::msg::Sona
  * @param  msg:消息数据
  * @return NONE
 *********************************************************************************/
-void MsgAdapter::imu_callback(const sealien_ctrlpilot_msgmanagement::msg::Elb105Shzr04& msg){
-  geometry_msgs::msg::PoseStamped imu_pose;
-  tf2::Quaternion quat;
+void MsgAdapter::imu_callback(const sealien_ctrlpilot_msgmanagement::msg::Elb105Shzr04& msg)
+{
+  tf2::Quaternion q_ins;
+  tf2::Quaternion q_offset;
+  tf2::Quaternion q_base;
   std_msgs::msg::Float32 yaw1_pub;
-  double locate_yaw;
+  double locate_yaw = 0.0;
+  double dvl_front_mps = 0.0;
+  double dvl_right_mps = 0.0;
+  double dvl_down_mps = 0.0;
 
-  if(msg.alignment_status != 3){
+  if (msg.alignment_status != 3)
+  {
     return;
   }
 
-  locate_yaw = Trans2LocatCoordinate(msg.heading_deg);//转换坐标系，并转换成rad
+  /* Z下航向 -> Z上yaw：取反并归一化到 (-pi, pi] */
+  locate_yaw = Trans2LocatCoordinate(msg.heading_deg);
 
-  yaw1_pub.data = msg.heading_deg;  
+  yaw1_pub.data = msg.heading_deg;
   yaw_origin_publisher->publish(yaw1_pub);
 
-  quat.setRPY(msg.roll_deg/RAD2DEG, msg.pitch_deg/RAD2DEG, locate_yaw);
+  q_ins.setRPY(msg.roll_deg * DEG2RAD, msg.pitch_deg * DEG2RAD, locate_yaw);
+  /* INS(x左/y前/z下) -> base_link(x前/y左/z上) */
+  q_offset.setRPY(M_PI, 0.0, M_PI / 2.0);
+  q_base = q_ins * q_offset;
 
-
-  //判断是否要重置参考点
-  if(restRef_flag){
+  if (restRef_flag)
+  {
     restRef_flag = false;
     origin_ref.Reset(msg.latitude_deg, msg.longitude_deg, rov_odom.pose.pose.position.z);
   }
 
-
-  origin_ref.Forward(msg.latitude_deg, msg.longitude_deg, rov_odom.pose.pose.position.z,  //相对位置
+  origin_ref.Forward(msg.latitude_deg, msg.longitude_deg, rov_odom.pose.pose.position.z,
       cur_imu_pos.x, cur_imu_pos.y, cur_imu_pos.z);
 
-  rov_odom.pose.pose.orientation = tf2::toMsg(quat);
-  
-  rov_odom.twist.twist.angular.x = msg.gyro_x_degps/RAD2DEG;
-  rov_odom.twist.twist.angular.y = msg.gyro_y_degps/RAD2DEG;
-  rov_odom.twist.twist.angular.z = msg.gyro_z_degps/RAD2DEG;
+  rov_odom.pose.pose.orientation = tf2::toMsg(q_base);
 
-  rov_odom.twist.twist.linear.x = msg.dvl_water_front_mps;
-  rov_odom.twist.twist.linear.y = msg.dvl_water_right_mps;
-  rov_odom.twist.twist.linear.z = msg.dvl_water_down_mps;
+  /* 陀螺：INS(x左/y前/z下) -> base(x前/y左/z上): (gyro_y, gyro_x, -gyro_z) */
+  rov_odom.twist.twist.angular.x = msg.gyro_y_degps * DEG2RAD;
+  rov_odom.twist.twist.angular.y = msg.gyro_x_degps * DEG2RAD;
+  rov_odom.twist.twist.angular.z = -msg.gyro_z_degps * DEG2RAD;
 
-  if(msg.dvl_valid_flags == 7){ //对底有效
-    rov_odom.twist.twist.linear.x = msg.dvl_bottom_front_mps;
-    rov_odom.twist.twist.linear.y = msg.dvl_bottom_right_mps;
-    rov_odom.twist.twist.linear.z = msg.dvl_bottom_down_mps;
+  dvl_front_mps = msg.dvl_water_front_mps;
+  dvl_right_mps = msg.dvl_water_right_mps;
+  dvl_down_mps = msg.dvl_water_down_mps;
+
+  if (msg.dvl_valid_flags == 7)  // 对底有效
+  {
+    dvl_front_mps = msg.dvl_bottom_front_mps;
+    dvl_right_mps = msg.dvl_bottom_right_mps;
+    dvl_down_mps = msg.dvl_bottom_down_mps;
   }
+
+  /* DVL 船体语义：与旧版一致 前->x / 右->y / 下->z（供 velx=linear.x） */
+  rov_odom.twist.twist.linear.x = dvl_front_mps;
+  rov_odom.twist.twist.linear.y = dvl_right_mps;
+  rov_odom.twist.twist.linear.z = dvl_down_mps;
 
   rov_odom.pose.pose.position.x = cur_imu_pos.x;
   rov_odom.pose.pose.position.y = cur_imu_pos.y;
-
 
   rov_odom.header.stamp = this->get_clock()->now();
   rov_odom.header.frame_id = "odom";
   rov_odom.child_frame_id = "base_link";
   RovOdom_publisher->publish(rov_odom);
 
-
   geometry_msgs::msg::TransformStamped transformStamped;
   transformStamped.header.stamp = this->now();
-  transformStamped.header.frame_id = "odom"; // Source frame
-  transformStamped.child_frame_id = "base_link"; // Target frame
-  transformStamped.transform.translation.x = rov_odom.pose.pose.position.x; // Example translation from odom to base_link frame (x, y, z)
-  transformStamped.transform.translation.y = rov_odom.pose.pose.position.y; 
-  transformStamped.transform.translation.z = rov_odom.pose.pose.position.z; 
+  transformStamped.header.frame_id = "odom";
+  transformStamped.child_frame_id = "base_link";
+  transformStamped.transform.translation.x = rov_odom.pose.pose.position.x;
+  transformStamped.transform.translation.y = rov_odom.pose.pose.position.y;
+  transformStamped.transform.translation.z = rov_odom.pose.pose.position.z;
   transformStamped.transform.rotation.x = rov_odom.pose.pose.orientation.x;
   transformStamped.transform.rotation.y = rov_odom.pose.pose.orientation.y;
   transformStamped.transform.rotation.z = rov_odom.pose.pose.orientation.z;
@@ -177,19 +199,24 @@ void MsgAdapter::resetRef_callback(const std_msgs::msg::Bool& msg){
 }
 
 /********************************************************************************
- * @brief  :转换到控制坐标系
- * @param  angle:消息数据
- * @return NONE
+ * @brief  :惯导航向(deg, Z下)转到控制系 yaw(rad, Z上)，并归一化到 (-pi, pi]
+ * @param  heading_deg: 惯导航向角 [deg]
+ * @return yaw [rad]
 *********************************************************************************/
-double MsgAdapter::Trans2LocatCoordinate(const double& angle){
-  float yaw_tmp = 2*M_PI - angle;   //imu角度相反
-  // float yaw_tmp = msg.yaw_deg;  
+double MsgAdapter::Trans2LocatCoordinate(const double& heading_deg)
+{
+  double yaw_rad = -heading_deg * DEG2RAD;
 
-  if(yaw_tmp > M_PI){
-    yaw_tmp = yaw_tmp - 2*M_PI;
+  while (yaw_rad > M_PI)
+  {
+    yaw_rad -= 2.0 * M_PI;
   }
-  
-  return yaw_tmp;
+  while (yaw_rad < -M_PI)
+  {
+    yaw_rad += 2.0 * M_PI;
+  }
+
+  return yaw_rad;
 }
 
 /********************************************************************************

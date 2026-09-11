@@ -10,6 +10,8 @@
 
 #include "controller_core.hpp"
 
+#include <cmath>
+
 namespace ControllerNS{
 
 using namespace std::placeholders;
@@ -43,6 +45,11 @@ Controller::Controller(std::string node_name):Node(node_name){
       "/task_stage",
       10,
       std::bind(&Controller::TaskStage_callback, this, _1));
+
+  elb105_shzr04_subscriber_ = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::Elb105Shzr04>(
+      "/elb105/shzr04",
+      10,
+      std::bind(&Controller::Elb105Shzr04_callback, this, _1));
     
   displacement_status_subscriber = this->create_subscription<sealien_ctrlpilot_msgmanagement::msg::WireDisplacementStatus>("/WireDisplacementStatus", 10,
   std::bind(&Controller::displacement_callback, this, _1)); 
@@ -118,6 +125,7 @@ void Controller::controller_init(){
   status.sensor_displace_pitchmotor = 0.0;  //俯仰电机拉线传感器位移，单位%
   status.valve1_status = false;   //阀1状态，0:关， 1:开
   status.valve2_status = false;   //阀2状态，0:关， 1:开
+  last_shzr04_valid_ = false;
 
   this->declare_parameter<int>("gs1_dir", 1);
   this->declare_parameter<int>("gs2_dir", 1);
@@ -373,6 +381,13 @@ void Controller::TaskStage_callback(const sealien_ctrlpilot_msgmanagement::msg::
   pid_debug_logger_.on_task_stage(msg);
 }
 
+void Controller::Elb105Shzr04_callback(const sealien_ctrlpilot_msgmanagement::msg::Elb105Shzr04& msg)
+{
+  std::lock_guard<std::mutex> lock(shzr04_mutex_);
+  last_shzr04_ = msg;
+  last_shzr04_valid_ = true;
+}
+
 void Controller::pid_debug_log_sample(void){
   if (!pid_debug_logger_.is_recording())
   {
@@ -418,6 +433,53 @@ void Controller::pid_debug_log_sample(void){
   sample.vel_x_kp = pid_vx.kp;
   sample.vel_x_ki = pid_vx.ki;
   sample.vel_x_kd = pid_vx.kd;
+
+  {
+    std::lock_guard<std::mutex> lock(shzr04_mutex_);
+    if (last_shzr04_valid_)
+    {
+      sample.ins_align = static_cast<int>(last_shzr04_.alignment_status);
+      sample.ins_roll_deg = last_shzr04_.roll_deg;
+      sample.ins_pitch_deg = last_shzr04_.pitch_deg;
+      sample.ins_heading_deg = last_shzr04_.heading_deg;
+      sample.ins_gyro_x_degps = static_cast<float>(last_shzr04_.gyro_x_degps);
+      sample.ins_gyro_y_degps = static_cast<float>(last_shzr04_.gyro_y_degps);
+      sample.ins_gyro_z_degps = static_cast<float>(last_shzr04_.gyro_z_degps);
+      sample.dvl_btm_f_mps = last_shzr04_.dvl_bottom_front_mps;
+      sample.dvl_btm_r_mps = last_shzr04_.dvl_bottom_right_mps;
+      sample.dvl_btm_d_mps = last_shzr04_.dvl_bottom_down_mps;
+      sample.dvl_wtr_f_mps = last_shzr04_.dvl_water_front_mps;
+      sample.dvl_wtr_r_mps = last_shzr04_.dvl_water_right_mps;
+      sample.dvl_wtr_d_mps = last_shzr04_.dvl_water_down_mps;
+      sample.dvl_valid_flags = static_cast<int>(last_shzr04_.dvl_valid_flags);
+      sample.dvl_updated = static_cast<int>(last_shzr04_.dvl_data_updated);
+      sample.dvl_height_m = last_shzr04_.dvl_bottom_height_m;
+      sample.ins_lat_deg = last_shzr04_.latitude_deg;
+      sample.ins_lon_deg = last_shzr04_.longitude_deg;
+    }
+    else
+    {
+      sample.ins_align = -1;
+      sample.ins_roll_deg = NAN;
+      sample.ins_pitch_deg = NAN;
+      sample.ins_heading_deg = NAN;
+      sample.ins_gyro_x_degps = NAN;
+      sample.ins_gyro_y_degps = NAN;
+      sample.ins_gyro_z_degps = NAN;
+      sample.dvl_btm_f_mps = NAN;
+      sample.dvl_btm_r_mps = NAN;
+      sample.dvl_btm_d_mps = NAN;
+      sample.dvl_wtr_f_mps = NAN;
+      sample.dvl_wtr_r_mps = NAN;
+      sample.dvl_wtr_d_mps = NAN;
+      sample.dvl_valid_flags = -1;
+      sample.dvl_updated = -1;
+      sample.dvl_height_m = NAN;
+      sample.ins_lat_deg = NAN;
+      sample.ins_lon_deg = NAN;
+    }
+  }
+
   pid_debug_logger_.write_sample(sample);
 }
 

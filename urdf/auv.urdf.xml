@@ -82,10 +82,11 @@
     </visual>
   </link>
 
+  <!-- sensor_imu: INS x左/y前/z下 -> base_link x前/y左/z上；rpy=pi,0,pi/2 -->
   <joint name="joint_imu" type="fixed">
     <parent link="base_link"/>
     <child link="sensor_imu"/>
-    <origin rpy="0 0 0" xyz="0.3 0 -0.17"/>
+    <origin rpy="3.1415926 0 1.5707963" xyz="0.3 0 -0.17"/>
   </joint>
 
   <!--dvl-->
